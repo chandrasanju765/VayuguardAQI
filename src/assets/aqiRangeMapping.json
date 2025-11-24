@@ -1,0 +1,1118 @@
+{
+  "WHO": {
+    "aqi": [
+      {
+        "min": 0,
+        "max": 50,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 50.001,
+        "max": 100,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 100.001,
+        "max": 150,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 150.001,
+        "max": 200,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 200.001,
+        "max": 300,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 300.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "pm2.5": [
+      {
+        "min": 0,
+        "max": 12,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 12.001,
+        "max": 35.499,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 35.5,
+        "max": 55.499,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 55.5,
+        "max": 150.499,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 150.5,
+        "max": 250.499,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 250.5,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "temp": [
+      {
+        "min": 0,
+        "max": 12,
+        "bgColor": "#71B51A",
+        "label": "Very Cold"
+      },
+      {
+        "min": 12.001,
+        "max": 35.499,
+        "bgColor": "#C8A600",
+        "label": "Optimal"
+      },
+      {
+        "min": 35.5,
+        "max": 55.499,
+        "bgColor": "#EA9B1D",
+        "label": "Hot"
+      },
+      {
+        "min": 55.5,
+        "max": 150.499,
+        "bgColor": "#E95675",
+        "label": "Very Hot"
+      },
+      {
+        "min": 150.5,
+        "max": 250.499,
+        "bgColor": "#A250EE",
+        "label": "Extreme"
+      },
+      {
+        "min": 250.5,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Dangerous"
+      }
+    ],
+    "pm10.0": [
+      {
+        "min": 0,
+        "max": 54,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 54.001,
+        "max": 154,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 154.001,
+        "max": 254,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 254.001,
+        "max": 354,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 354.001,
+        "max": 424,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 424.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "co2": [
+      {
+        "min": 400,
+        "max": 699,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 700,
+        "max": 1099,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 1100,
+        "max": 1599,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 1600,
+        "max": 2099,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2100,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Very Unhealthy"
+      }
+    ],
+    "tvoc": [
+      {
+        "min": 0,
+        "max": 65,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 65.001,
+        "max": 220,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 220.001,
+        "max": 660,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 660.001,
+        "max": 2200,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2200.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Very Unhealthy"
+      }
+    ],
+    "hcho": [
+      {
+        "min": 0,
+        "max": 0.1,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 0.1001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Unhealthy"
+      }
+    ],
+    "co": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      }
+    ],
+    "ozone": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      }
+    ],
+    "no2": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      }
+    ],
+    "humidity": [
+      {
+        "min": 30,
+        "max": 59,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 24.001,
+        "max": 29.999,
+        "bgColor": "#C8A600",
+        "label": "Fair"
+      },
+      {
+        "min": 59.001,
+        "max": 69,
+        "bgColor": "#C8A600",
+        "label": "Fair"
+      },
+      {
+        "min": 69.001,
+        "max": 100,
+        "bgColor": "#E95675",
+        "label": "Poor"
+      },
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#E95675",
+        "label": "Poor"
+      }
+    ],
+    "so2": [
+      {
+        "min": 0,
+        "max": 20,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 20.001,
+        "max": 80,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 80.001,
+        "max": 365,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 365.001,
+        "max": 800,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 800.001,
+        "max": 1600,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 1600.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "ch4": [
+      {
+        "min": 0,
+        "max": 1800,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 1800.001,
+        "max": 2000,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 2000.001,
+        "max": 2200,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 2200.001,
+        "max": 2500,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2500.001,
+        "max": 3000,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 3000.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ]
+  },
+  "USEPA": {
+    "aqi": [
+      {
+        "min": 0,
+        "max": 50,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 50.001,
+        "max": 100,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 100.001,
+        "max": 150,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 150.001,
+        "max": 200,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 200.001,
+        "max": 300,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 300.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "pm2.5": [
+      {
+        "min": 0,
+        "max": 12,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 12.001,
+        "max": 35.499,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 35.5,
+        "max": 55.499,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 55.5,
+        "max": 150.499,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 150.5,
+        "max": 250.499,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 250.5,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "temp": [
+      {
+        "min": 0,
+        "max": 12,
+        "bgColor": "#71B51A",
+        "label": "Very Cold"
+      },
+      {
+        "min": 12.001,
+        "max": 35.499,
+        "bgColor": "#C8A600",
+        "label": "Optimal"
+      },
+      {
+        "min": 35.5,
+        "max": 55.499,
+        "bgColor": "#EA9B1D",
+        "label": "Hot"
+      },
+      {
+        "min": 55.5,
+        "max": 150.499,
+        "bgColor": "#E95675",
+        "label": "Very Hot"
+      },
+      {
+        "min": 150.5,
+        "max": 250.499,
+        "bgColor": "#A250EE",
+        "label": "Extreme"
+      },
+      {
+        "min": 250.5,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Dangerous"
+      }
+    ],
+    "pm10.0": [
+      {
+        "min": 0,
+        "max": 54,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 54.001,
+        "max": 154,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 154.001,
+        "max": 254,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 254.001,
+        "max": 354,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 354.001,
+        "max": 424,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 424.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "co2": [
+      {
+        "min": 400,
+        "max": 699.999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 700,
+        "max": 1099.999,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 1100,
+        "max": 1599.999,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 1600,
+        "max": 2099.999,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2100,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Very Unhealthy"
+      }
+    ],
+    "tvoc": [
+      {
+        "min": 0,
+        "max": 65,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 65.001,
+        "max": 220,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 220,
+        "max": 660,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 660,
+        "max": 2200,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2200,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Very Unhealthy"
+      }
+    ],
+    "hcho": [
+      {
+        "min": 0,
+        "max": 0.1,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 0.1001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Unhealthy"
+      }
+    ],
+    "co": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      }
+    ],
+    "ozone": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      }
+    ],
+    "no2": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      }
+    ],
+    "humidity": [
+      {
+        "min": 30,
+        "max": 59,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 59.001,
+        "max": 69,
+        "bgColor": "#C8A600",
+        "label": "Fair"
+      },
+      {
+        "min": 24.001,
+        "max": 29.999,
+        "bgColor": "#C8A600",
+        "label": "Fair"
+      },
+      {
+        "min": 69.001,
+        "max": 100,
+        "bgColor": "#E95675",
+        "label": "Poor"
+      },
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#E95675",
+        "label": "Poor"
+      }
+    ],
+    "so2": [
+      {
+        "min": 0,
+        "max": 35,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 35.001,
+        "max": 75,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 75.001,
+        "max": 185,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 185.001,
+        "max": 304,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 304.001,
+        "max": 604,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 604.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ],
+    "ch4": [
+      {
+        "min": 0,
+        "max": 1800,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 1800.001,
+        "max": 2000,
+        "bgColor": "#C8A600",
+        "label": "Moderate"
+      },
+      {
+        "min": 2000.001,
+        "max": 2200,
+        "bgColor": "#EA9B1D",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 2200.001,
+        "max": 2500,
+        "bgColor": "#E95675",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2500.001,
+        "max": 3000,
+        "bgColor": "#A250EE",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 3000.001,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Hazardous"
+      }
+    ]
+  },
+  "CPCB": {
+    "aqi": [
+      {
+        "min": 0,
+        "max": 50,
+        "bgColor": "#009966",
+        "label": "Good"
+      },
+      {
+        "min": 50.001,
+        "max": 100,
+        "bgColor": "#FFDE33",
+        "label": "Moderate"
+      },
+      {
+        "min": 100.001,
+        "max": 200,
+        "bgColor": "#FF9933",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 200.001,
+        "max": 300,
+        "bgColor": "#CC0033",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 300.001,
+        "max": 400,
+        "bgColor": "#660099",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 400.001,
+        "max": 99999,
+        "bgColor": "#800080",
+        "label": "Hazardous"
+      }
+    ],
+    "pm2.5": [
+      {
+        "min": 0,
+        "max": 30,
+        "bgColor": "#009966"
+      },
+      {
+        "min": 30.001,
+        "max": 60,
+        "bgColor": "#FFDE33"
+      },
+      {
+        "min": 60.001,
+        "max": 90,
+        "bgColor": "#FF9933"
+      },
+      {
+        "min": 90.001,
+        "max": 120,
+        "bgColor": "#CC0033"
+      },
+      {
+        "min": 120.001,
+        "max": 250,
+        "bgColor": "#660099"
+      },
+      {
+        "min": 250.001,
+        "max": 99999,
+        "bgColor": "#800080"
+      }
+    ],
+    "temp": [
+      {
+        "min": 0,
+        "max": 12,
+        "bgColor": "#71B51A",
+        "label": "Very Cold"
+      },
+      {
+        "min": 12.001,
+        "max": 35.499,
+        "bgColor": "#C8A600",
+        "label": "Optimal"
+      },
+      {
+        "min": 35.5,
+        "max": 55.499,
+        "bgColor": "#EA9B1D",
+        "label": "Hot"
+      },
+      {
+        "min": 55.5,
+        "max": 150.499,
+        "bgColor": "#E95675",
+        "label": "Very Hot"
+      },
+      {
+        "min": 150.5,
+        "max": 250.499,
+        "bgColor": "#A250EE",
+        "label": "Extreme"
+      },
+      {
+        "min": 250.5,
+        "max": 99999,
+        "bgColor": "#a36464",
+        "label": "Dangerous"
+      }
+    ],
+    "pm10.0": [
+      {
+        "min": 0,
+        "max": 50,
+        "bgColor": "#009966",
+        "label": "Good"
+      },
+      {
+        "min": 50.001,
+        "max": 100,
+        "bgColor": "#FFDE33",
+        "label": "Moderate"
+      },
+      {
+        "min": 100.001,
+        "max": 250,
+        "bgColor": "#FF9933",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 250.001,
+        "max": 350,
+        "bgColor": "#CC0033",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 350.001,
+        "max": 430,
+        "bgColor": "#660099",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 430.001,
+        "max": 99999,
+        "bgColor": "#800080",
+        "label": "Hazardous"
+      }
+    ],
+    "co2": [
+      {
+        "min": 0,
+        "max": 1,
+        "bgColor": "#71B51A"
+      },
+      {
+        "min": 1.001,
+        "max": 2,
+        "bgColor": "#C8A600"
+      },
+      {
+        "min": 2.001,
+        "max": 10,
+        "bgColor": "#EA9B1D"
+      },
+      {
+        "min": 10.001,
+        "max": 17,
+        "bgColor": "#E95675"
+      },
+      {
+        "min": 17.001,
+        "max": 99999,
+        "bgColor": "#a36464"
+      }
+    ],
+    "tvoc": [
+      {
+        "min": 0,
+        "max": 65,
+        "bgColor": "#71B51A"
+      },
+      {
+        "min": 65.001,
+        "max": 220,
+        "bgColor": "#C8A600"
+      },
+      {
+        "min": 220.001,
+        "max": 660,
+        "bgColor": "#EA9B1D"
+      },
+      {
+        "min": 660.001,
+        "max": 2200,
+        "bgColor": "#E95675"
+      },
+      {
+        "min": 2200.001,
+        "max": 99999,
+        "bgColor": "#a36464"
+      }
+    ],
+    "hcho": [
+      {
+        "min": 0,
+        "max": 0.1,
+        "bgColor": "#71B51A"
+      },
+      {
+        "min": 0.1001,
+        "max": 99999,
+        "bgColor": "#a36464"
+      }
+    ],
+    "co": [
+      {
+        "min": 0,
+        "max": 1,
+        "bgColor": "#71B51A"
+      },
+      {
+        "min": 1.001,
+        "max": 2,
+        "bgColor": "#C8A600"
+      },
+      {
+        "min": 2.001,
+        "max": 10,
+        "bgColor": "#EA9B1D"
+      },
+      {
+        "min": 10.001,
+        "max": 17,
+        "bgColor": "#E95675"
+      },
+      {
+        "min": 17.001,
+        "max": 99999,
+        "bgColor": "#a36464"
+      }
+    ],
+    "ozone": [
+      {
+        "min": 0,
+        "max": 50,
+        "bgColor": "#009966"
+      },
+      {
+        "min": 50.001,
+        "max": 100,
+        "bgColor": "#FFDE33"
+      },
+      {
+        "min": 100.001,
+        "max": 168,
+        "bgColor": "#FF9933"
+      },
+      {
+        "min": 168.001,
+        "max": 208,
+        "bgColor": "#CC0033"
+      },
+      {
+        "min": 208.001,
+        "max": 748,
+        "bgColor": "#660099"
+      },
+      {
+        "min": 748.001,
+        "max": 99999,
+        "bgColor": "#800080"
+      }
+    ],
+    "no2": [
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#71B51A"
+      }
+    ],
+    "humidity": [
+      {
+        "min": 30,
+        "max": 59,
+        "bgColor": "#71B51A",
+        "label": "Good"
+      },
+      {
+        "min": 59.001,
+        "max": 69,
+        "bgColor": "#C8A600",
+        "label": "Fair"
+      },
+      {
+        "min": 24.001,
+        "max": 29.999,
+        "bgColor": "#C8A600",
+        "label": "Fair"
+      },
+      {
+        "min": 69.001,
+        "max": 100,
+        "bgColor": "#E95675",
+        "label": "Poor"
+      },
+      {
+        "min": 0,
+        "max": 99999,
+        "bgColor": "#E95675",
+        "label": "Poor"
+      }
+    ],
+    "so2": [
+      {
+        "min": 0,
+        "max": 40,
+        "bgColor": "#009966",
+        "label": "Good"
+      },
+      {
+        "min": 40.001,
+        "max": 80,
+        "bgColor": "#FFDE33",
+        "label": "Moderate"
+      },
+      {
+        "min": 80.001,
+        "max": 380,
+        "bgColor": "#FF9933",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 380.001,
+        "max": 800,
+        "bgColor": "#CC0033",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 800.001,
+        "max": 1600,
+        "bgColor": "#660099",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 1600.001,
+        "max": 99999,
+        "bgColor": "#800080",
+        "label": "Hazardous"
+      }
+    ],
+    "ch4": [
+      {
+        "min": 0,
+        "max": 1800,
+        "bgColor": "#009966",
+        "label": "Good"
+      },
+      {
+        "min": 1800.001,
+        "max": 2000,
+        "bgColor": "#FFDE33",
+        "label": "Moderate"
+      },
+      {
+        "min": 2000.001,
+        "max": 2200,
+        "bgColor": "#FF9933",
+        "label": "Unhealthy for Sensitive Groups"
+      },
+      {
+        "min": 2200.001,
+        "max": 2500,
+        "bgColor": "#CC0033",
+        "label": "Unhealthy"
+      },
+      {
+        "min": 2500.001,
+        "max": 3000,
+        "bgColor": "#660099",
+        "label": "Very Unhealthy"
+      },
+      {
+        "min": 3000.001,
+        "max": 99999,
+        "bgColor": "#800080",
+        "label": "Hazardous"
+      }
+    ]
+  }
+}

@@ -1,0 +1,274 @@
+import React, { useMemo } from "react";
+import { Badge } from "../../../../components/ui/badge";
+import {
+  calculateComparisonAirQualityData,
+  calculatePointerPosition,
+  createMetrics,
+  getColorForValue,
+  getQualityLabel,
+  type AQIComparisonData,
+} from "../utils";
+import type { GetAQILogsHistoryByDeviceIDResponse } from "../../../../models/AQILogsHistory";
+import { useAtomValue } from "jotai";
+import { selectedAQIStandardAtom } from "../../../../atoms/aqiStandard";
+import { useCurrentTime } from "../../../../hooks/useCurrentTime";
+import type { AQICNGeoFeedData } from "../../../../types/aqicn";
+
+interface ComparisonFrameProps {
+  aqiData?: GetAQILogsHistoryByDeviceIDResponse["data"];
+  isLoading?: boolean;
+  error?: any;
+  outdoorAQIData?: AQICNGeoFeedData | null;
+  outdoorLoading?: boolean;
+  outdoorError?: any;
+}
+
+export const Frame5 = ({
+  aqiData,
+  isLoading,
+  error,
+  outdoorAQIData,
+  outdoorLoading = false,
+  outdoorError,
+}: ComparisonFrameProps): React.JSX.Element => {
+  const selectedAQIStandard = useAtomValue(selectedAQIStandardAtom);
+  const { formattedTime, greeting } = useCurrentTime();
+
+  const airQualityData = useMemo(() => {
+    const combinedData: AQIComparisonData = {
+      indoor_avg: aqiData?.indoor_avg,
+      outdoor_avg: {
+        "pm2.5": outdoorAQIData?.iaqi?.pm25?.v ?? null,
+      },
+    };
+    return calculateComparisonAirQualityData(combinedData, selectedAQIStandard);
+  }, [aqiData, outdoorAQIData, selectedAQIStandard]);
+
+  // Get outdoor AQI directly from the API response
+  const outdoorAQI = useMemo(() => {
+    return outdoorAQIData?.aqi ?? 0;
+  }, [outdoorAQIData]);
+
+  const outdoorTextColor = useMemo(() => {
+    if (outdoorAQI > 0) {
+      return getColorForValue(outdoorAQI, "aqi", selectedAQIStandard).bgColor;
+    }
+    return "#6b7280"; // gray for no data
+  }, [outdoorAQI, selectedAQIStandard]);
+
+  const outdoorQualityLabel = useMemo(() => {
+    if (outdoorAQI > 0) {
+      return getQualityLabel(outdoorAQI, "aqi", selectedAQIStandard);
+    }
+    return "No Data";
+  }, [outdoorAQI, selectedAQIStandard]);
+
+  const scaleValues = ["50", "100", "200", "300", "400", "500"];
+
+  const getIndicatorImage = (aqiValue: string): string => {
+    if (aqiValue === "--") return "/pointer.svg"; // fallback for no data
+
+    const numericAQI = parseInt(aqiValue);
+
+    if (numericAQI < 50) return "/green-indicator.svg";
+    if (numericAQI < 100) return "/yellow-indicator.svg";
+    if (numericAQI < 150) return "/orange-indicator.svg";
+    if (numericAQI < 200) return "/red-indicator.svg";
+    if (numericAQI < 250) return "/pink-indicator.svg";
+    if (numericAQI < 300) return "/violet-indicator.svg";
+
+    return "/violet-indicator.svg"; // for AQI >= 300
+  };
+
+  const indoorMetrics = useMemo(() => {
+    const labels = ["SO2", "NO2", "O3", "CH4"];
+    const dataKeys = ["so2", "no2", "ozone", "ch4"];
+    const parameterKeys = ["so2", "no2", "ozone", "ch4"];
+
+    return aqiData?.indoor_avg
+      ? createMetrics(
+          aqiData.indoor_avg,
+          selectedAQIStandard,
+          labels,
+          dataKeys,
+          parameterKeys
+        )
+      : createMetrics({}, selectedAQIStandard, labels, dataKeys, parameterKeys);
+  }, [aqiData, selectedAQIStandard]);
+
+  // Create dynamic outdoor metrics based on AQICN API data
+  const outdoorMetrics = useMemo(() => {
+    const labels = ["SO2", "NO2", "O3", "CH4"];
+    const dataKeys = ["so2", "no2", "o3", "ch4"];
+    const parameterKeys = ["so2", "no2", "ozone", "ch4"];
+
+    return outdoorAQIData?.iaqi
+      ? createMetrics(
+          outdoorAQIData.iaqi,
+          selectedAQIStandard,
+          labels,
+          dataKeys,
+          parameterKeys,
+          true
+        )
+      : createMetrics(
+          {},
+          selectedAQIStandard,
+          labels,
+          dataKeys,
+          parameterKeys,
+          true
+        );
+  }, [outdoorAQIData, selectedAQIStandard]);
+
+  return (
+    <div className="bg-neutral-100 relative w-[900px] h-[500px]">
+      {/* Logo in top right corner */}
+      <div className="absolute top-4 right-4 z-20">
+        <img 
+          src="/VG_logo.png" 
+          alt="VG Logo" 
+          className="h-8 w-auto" 
+        />
+      </div>
+
+      {/* Loading State */}
+      {(isLoading || outdoorLoading) && (
+        <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-20">
+          <div className="bg-white p-4 rounded-lg shadow-lg">
+            <p className="text-gray-700">
+              {isLoading && outdoorLoading
+                ? "Loading comparison data..."
+                : isLoading
+                ? "Loading indoor data..."
+                : "Loading outdoor data..."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {(error || outdoorError) && !isLoading && !outdoorLoading && (
+        <div className="absolute top-16 left-6 right-6 bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded z-10">
+          <p className="text-sm">Error in loading data</p>
+        </div>
+      )}
+
+      <div className="w-full h-44 bg-[linear-gradient(90deg,rgba(132,250,222,0.65)_0%,rgba(143,211,244,0.65)_100%)] relative">
+        <div className="h-full flex items-center pl-20">
+          <p>
+            {formattedTime}
+            <br />
+            <span className="font-bold">{greeting}</span>
+          </p>
+        </div>
+
+        <img
+          className="absolute w-[240px] bottom-0 right-20"
+          alt="City skyline pana"
+          src="/colorful-building.svg"
+        />
+      </div>
+
+      <div className="flex items-center justify-between mt-6 px-16">
+        <div className="relative gap-3 mb-4">
+          <p
+            className="text-6xl font-bold gap-4"
+            style={{ color: outdoorTextColor }}
+          >
+            {outdoorAQI > 0 ? outdoorAQI : "--"}
+          </p>
+          <p className="max-w-40 text-sm mt-4">
+            {airQualityData[1]?.description ||
+              "PM 2.5 - No outdoor data available"}
+          </p>
+          <Badge
+            className="top-7 left-28 absolute w-32 text-[10px]"
+            style={{ color: outdoorTextColor }}
+          >
+            {outdoorQualityLabel}
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-4 grid-rows-2 gap-6">
+          {/* First row - Indoor metrics */}
+          {indoorMetrics.map((metric, index) => {
+            return (
+              <div
+                key={`indoor-metric-${index}`}
+                style={{
+                  backgroundColor: metric.bgColor,
+                  color: metric.textColor,
+                }}
+                className="flex flex-col items-center justify-center w-20 h-20 rounded-full shadow"
+              >
+                <div className="font-medium text-center">{metric.value}</div>
+                <div className="opacity-75 text-sm text-center">
+                  {metric.label}
+                </div>
+                <div className="text-[10px] opacity-75 text-center">Indoor</div>
+              </div>
+            );
+          })}
+          {/* Second row - Outdoor metrics */}
+          {outdoorMetrics.map((metric, index) => {
+            return (
+              <div
+                key={`outdoor-metric-${index}`}
+                style={{
+                  backgroundColor: metric.bgColor,
+                  color: metric.textColor,
+                }}
+                className="flex flex-col items-center justify-center w-20 h-20 rounded-full shadow"
+              >
+                <div className="font-medium text-center">{metric.value}</div>
+                <div className="opacity-75 text-sm text-center">
+                  {metric.label}
+                </div>
+                <div className="text-[10px] opacity-75 text-center">
+                  Outdoor
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="w-full flex items-center justify-center gap-10 mt-10">
+        <div className="relative">
+          <div
+            className="w-80 h-6 rounded-2xl"
+            style={{
+              background:
+                "linear-gradient(90deg, #59B61F 0%, #EAAF01 16.66%, #EA8C34 33.32%, #E95478 50%, #B33FBA 66.64%, #A053F6 83.33%)",
+            }}
+          />
+          <div className="flex w-72 h-2 items-center justify-between absolute top-2 left-3.5 z-10">
+            {scaleValues.map((value, scaleIndex) => (
+              <div
+                key={scaleIndex}
+                className="font-semibold text-white text-[5.1px]"
+              >
+                {value}
+              </div>
+            ))}
+          </div>
+
+          <img
+            src={getIndicatorImage(
+              outdoorAQI > 0 ? outdoorAQI.toString() : "--"
+            )}
+            className="absolute -top-0.5 w-3 object-contain"
+            style={{
+              left: `${calculatePointerPosition(
+                outdoorAQI > 0 ? outdoorAQI.toString() : "--"
+              )}px`,
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Frame5;
