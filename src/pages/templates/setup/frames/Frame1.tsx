@@ -113,13 +113,13 @@ const IndoorAQIFrame = ({ aqiData, isLoading, lastUpdated }: IndoorAQIFrameProps
       </div>
 
       {/* Last Updated */}
-      {lastUpdated && (
+      {/* {lastUpdated && (
         <div className="absolute top-4 left-4 z-20">
           <div className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
             Updated: {new Date(lastUpdated).toLocaleTimeString()}
           </div>
         </div>
-      )}
+      )} */}
 
       <h1 className="text-center text-2xl font-semibold mt-4">Indoor</h1>
 

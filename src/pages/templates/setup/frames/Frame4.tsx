@@ -34,62 +34,53 @@ export const ComparisonFrame = ({
   const selectedAQIStandard = useAtomValue(selectedAQIStandardAtom);
   const { formattedTime, greeting } = useCurrentTime();
 
-  // Debug: Log the real-time data structure
-  console.log("=== COMPARISON FRAME DEBUG ===");
-  console.log("Real-time data:", realtimeAQIData);
-  console.log("indoor_air_quality:", realtimeAQIData?.indoor_air_quality);
-  console.log("==============================");
-
-  // Get real-time PM2.5 value only - FIXED EXTRACTION
+  // Get real-time PM2.5 value only
   const realtimePM25 = useMemo(() => {
     if (!realtimeAQIData?.indoor_air_quality) {
       console.log("No indoor_air_quality found in real-time data");
       return null;
     }
     
-    console.log("Searching for pm2.5 in:", realtimeAQIData.indoor_air_quality);
-    
-    // Try different possible parameter names
     const pm25Param = realtimeAQIData.indoor_air_quality.find(
-      (item: any) => 
-        item.param === "pm2.5" || 
-        item.param === "pm25" ||
-        item.param?.toLowerCase() === "pm2.5"
+      (item: any) => item.param === "pm2.5"
     );
     
-    console.log("Found PM2.5 parameter:", pm25Param);
+    console.log("Real-time PM2.5 parameter:", pm25Param);
     
     if (pm25Param) {
-      console.log("PM2.5 value:", pm25Param.value);
+      console.log("Real-time PM2.5 value:", pm25Param.value);
       return pm25Param.value;
     }
     
-    console.log("PM2.5 parameter not found");
     return null;
   }, [realtimeAQIData]);
 
   // Get historical PM2.5 as fallback
   const historicalPM25 = useMemo(() => {
-    return aqiData?.indoor_avg?.["pm2.5"] ?? null;
+    const pm25 = aqiData?.indoor_avg?.["pm2.5"] ?? null;
+    console.log("Historical PM2.5 value:", pm25);
+    return pm25;
   }, [aqiData]);
 
-  console.log("Final PM2.5 values - Real-time:", realtimePM25, "Historical:", historicalPM25);
+  // Use real-time PM2.5 first, then historical as fallback
+  const currentPM25 = realtimePM25 ?? historicalPM25;
 
-  // Calculate indoor AQI from PM2.5 value - use real-time first, then historical
+  console.log("=== PM2.5 VALUES ===");
+  console.log("Real-time PM2.5:", realtimePM25);
+  console.log("Historical PM2.5:", historicalPM25);
+  console.log("Current PM2.5 (used for calculation):", currentPM25);
+
+  // Calculate indoor AQI from the SAME PM2.5 value that we display
   const indoorAQI = useMemo(() => {
-    const pm25 = realtimePM25 ?? historicalPM25;
-    
-    console.log("Calculating AQI with PM2.5:", pm25);
-    
-    if (pm25 !== null && pm25 !== undefined) {
-      const calculatedAQI = calculateAQI(pm25, undefined, undefined, undefined, selectedAQIStandard);
-      console.log("Calculated AQI:", calculatedAQI);
+    if (currentPM25 !== null && currentPM25 !== undefined) {
+      const calculatedAQI = calculateAQI(currentPM25, undefined, undefined, undefined, selectedAQIStandard);
+      console.log("Calculated AQI from PM2.5:", currentPM25, "->", calculatedAQI);
       return calculatedAQI;
     }
     
     console.log("No PM2.5 data available for AQI calculation");
     return 0;
-  }, [realtimePM25, historicalPM25, selectedAQIStandard]);
+  }, [currentPM25, selectedAQIStandard]);
 
   // Get outdoor AQI directly from the API response
   const outdoorAQI = useMemo(() => {
@@ -128,12 +119,11 @@ export const ComparisonFrame = ({
 
   // Get PM2.5 value for display with unit - ROUNDED
   const indoorPM25Display = useMemo(() => {
-    const pm25 = realtimePM25 ?? historicalPM25;
-    if (pm25 !== null && pm25 !== undefined) {
-      return `${Math.round(pm25)} μg/m³`; // Rounded to nearest integer
+    if (currentPM25 !== null && currentPM25 !== undefined) {
+      return `${Math.round(currentPM25)} μg/m³`; // Rounded to nearest integer
     }
     return "No data";
-  }, [realtimePM25, historicalPM25]);
+  }, [currentPM25]);
 
   // Get outdoor PM2.5 value - ROUNDED
   const outdoorPM25Value = useMemo(() => {
@@ -283,7 +273,7 @@ export const ComparisonFrame = ({
               {outdoorAQI > 0 ? Math.round(outdoorAQI) : "--"} {/* Rounded AQI */}
             </p>
             <p className="max-w-40 text-sm mt-1">
-              PM 10.0 - {outdoorPM25Display}
+              PM 2.5 - {outdoorPM25Display}
             </p>
             <Badge
               className="top-7 left-28 absolute w-32 text-[10px]"
