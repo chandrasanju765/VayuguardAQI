@@ -1,6 +1,5 @@
 // src/data/cachedQueries.ts
 import useSWR from "swr";
-import { useMemo } from "react";
 import customAxios, { aqicnAxios } from "./config";
 import type { GetAQIDevicesResponse } from "../models/AQIDevices";
 import type { GetCustomersApiResponse } from "../models/Customers";

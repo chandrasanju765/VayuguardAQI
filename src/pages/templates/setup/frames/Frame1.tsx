@@ -15,19 +15,10 @@ import { selectedAQIStandardAtom } from "../../../../atoms/aqiStandard";
 interface IndoorAQIFrameProps {
   aqiData?: any;
   isLoading?: boolean;
-  lastUpdated?: string;
 }
 
-const IndoorAQIFrame = ({ aqiData, isLoading, lastUpdated }: IndoorAQIFrameProps) => {
+const IndoorAQIFrame = ({ aqiData, isLoading }: IndoorAQIFrameProps) => {
   const [selectedStandard] = useAtom(selectedAQIStandardAtom);
-
-  console.log("=== INDOOR FRAME DEBUG ===");
-  console.log("Full aqiData:", aqiData);
-  console.log("indoor_air_quality array:", aqiData?.indoor_air_quality);
-  console.log("Array length:", aqiData?.indoor_air_quality?.length);
-  console.log("First item:", aqiData?.indoor_air_quality?.[0]);
-  console.log("Is loading:", isLoading);
-  console.log("=========================");
 
   // Extract and transform the data for utility functions
   const processedData = useMemo(() => {
@@ -111,15 +102,6 @@ const IndoorAQIFrame = ({ aqiData, isLoading, lastUpdated }: IndoorAQIFrameProps
       <div className="absolute top-4 right-4 z-20">
         <img src="/VG_logo.png" alt="VG Logo" className="h-8 w-auto" />
       </div>
-
-      {/* Last Updated */}
-      {/* {lastUpdated && (
-        <div className="absolute top-4 left-4 z-20">
-          <div className="bg-black bg-opacity-50 text-white text-xs px-2 py-1 rounded">
-            Updated: {new Date(lastUpdated).toLocaleTimeString()}
-          </div>
-        </div>
-      )} */}
 
       <h1 className="text-center text-2xl font-semibold mt-4">Indoor</h1>
 

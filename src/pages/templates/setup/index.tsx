@@ -15,7 +15,6 @@ import {
   useGetOutdoorAQIData,
   useGetRealtimeAQIData, 
 } from "../../../data/cachedQueries";
-import Frame5 from "./frames/Frame5";
 import toast from "react-hot-toast";
 import BlankCanvas from "./frames/BlankCanvas";
 import dayjs from "dayjs";
@@ -276,7 +275,6 @@ const SetupTemplatePage = () => {
     data: realtimeAQIData,
     error: realtimeAQIError,
     isLoading: realtimeAQILoading,
-    lastUpdated,
   } = useGetRealtimeAQIData(deviceMid);
 
   const {
@@ -441,10 +439,9 @@ const SetupTemplatePage = () => {
         component: (
           <div className="w-[900px] h-[500px] overflow-hidden">
               <IndoorAQIFrame
-      aqiData={realtimeAQIData}
-      isLoading={realtimeAQILoading}
-      lastUpdated={lastUpdated}
-    />
+              aqiData={realtimeAQIData}
+              isLoading={realtimeAQILoading}
+            />
           </div>
         ),
         name: "Frame 1",
