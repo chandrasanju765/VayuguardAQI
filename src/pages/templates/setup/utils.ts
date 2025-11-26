@@ -250,12 +250,10 @@ export function calculateDynamicEnvironmentalMetrics(
           textColor = getColorForValue(apiValue, "hcho").bgColor;
         }
         break;
-      case "co2":
-        apiValue = indoorData.co2;
-        if (apiValue) {
-          value = Math.round(apiValue).toString();
-          textColor = getColorForValue(apiValue, "co2").bgColor;
-        }
+           case "co2":
+        apiValue = indoorData.co2 ?? 0;  // treat null/undefined as 0
+        value = Math.round(apiValue).toString();  // ← This will show "0" instead of "-"
+        textColor = getColorForValue(apiValue, "co2").bgColor;
         break;
       default:
         break;

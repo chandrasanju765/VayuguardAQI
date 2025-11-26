@@ -1,4 +1,6 @@
+// src/data/cachedQueries.ts
 import useSWR from "swr";
+import { useMemo } from "react";
 import customAxios, { aqicnAxios } from "./config";
 import type { GetAQIDevicesResponse } from "../models/AQIDevices";
 import type { GetCustomersApiResponse } from "../models/Customers";
@@ -15,14 +17,59 @@ import type { AQICNGeoFeedResponse } from "../types/aqicn";
 import { getCurrentUser } from "../utils";
 
 async function getFetcher(url: string) {
-  try {
-    const response = await customAxios.get(url);
-    return response.data;
-  } catch (error) {
-    throw error;
-  }
+  const response = await customAxios.get(url);
+  return response.data;
 }
 
+// FINAL VERSION — returns exactly what IndoorAQIFrame expects
+export function useGetRealtimeAQIData(deviceId: string | null | undefined) {
+  const cacheKey = deviceId ? ["realtime-aqi", deviceId] : null;
+
+  const { data, error, isLoading, mutate } = useSWR<any>(
+    cacheKey,
+    async () => {
+      if (!deviceId) return null;
+
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(today.getDate() - 1);
+
+      const startDate = yesterday.toISOString().split("T")[0];
+      const endDate = today.toISOString().split("T")[0];
+
+      const response = await customAxios.get(
+        `/aqi-logs-all-id/${startDate}/${endDate}/${deviceId}`
+      );
+
+      const logs = response.data?.data?.data || [];
+      if (logs.length === 0) return null;
+
+      const latestLog = logs.sort((a: any, b: any) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )[0];
+
+      // THIS IS THE KEY: Return raw structure — NO label/unit added yet
+      return {
+        indoor_air_quality: latestLog.indoor_air_quality,   // ← raw array from API
+        outdoor_air_quality: latestLog.outdoor_air_quality || [],
+      };
+    },
+    {
+      refreshInterval: 20000,
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+    }
+  );
+
+  return {
+    data,
+    isLoading: cacheKey ? isLoading : false,
+    error,
+    mutate,
+    lastUpdated: data ? new Date().toISOString() : undefined,
+  };
+}
+// Your existing hooks remain the same...
 export function useGetAQIDevices() {
   const currentUser = getCurrentUser();
   const cacheKey = "/api/AirQualityDevice";

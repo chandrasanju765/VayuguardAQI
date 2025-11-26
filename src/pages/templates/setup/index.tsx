@@ -13,6 +13,7 @@ import {
   useGetAQIDevices,
   useGetAQILogsHistoryByDeviceID,
   useGetOutdoorAQIData,
+  useGetRealtimeAQIData, 
 } from "../../../data/cachedQueries";
 import Frame5 from "./frames/Frame5";
 import toast from "react-hot-toast";
@@ -230,48 +231,65 @@ const SetupTemplatePage = () => {
       : [];
   }, [devicesData]);
 
-  // Extract deviceId from template and find matching device
-  // template.deviceId is always a string
+  // FIXED: Get the device ID correctly
   const templateDeviceId = useMemo(() => {
     if (!templateData?.deviceId) return null;
     return (templateData.deviceId as string) || null;
   }, [templateData]);
 
-  const templateDevice: AQIDevice | null = useMemo(() => {
+  // FIXED: Find the device by _id (not mid)
+  const templateDevice = useMemo(() => {
     if (!templateDeviceId) return null;
     return devices.find((device) => device._id === templateDeviceId) || null;
   }, [templateDeviceId, devices]);
 
-  const outdoorAPIState = useMemo(() => {
-    const state = templateDevice?.outdoorAPIState;
-    // Return null if state is null, undefined, or empty string
-    return state && typeof state === "string" && state.trim() !== ""
-      ? state
-      : null;
+  // FIXED: Use deviceId from the device object (not mid)
+  const deviceMid = useMemo(() => {
+    return templateDevice?.deviceId || null;
   }, [templateDevice]);
 
-  // Calculate date range (1 day back by default)
+  console.log("=== DEVICE DEBUG ===");
+  console.log("Template deviceId:", templateDeviceId);
+  console.log("Found device:", templateDevice);
+  console.log("Device MID (deviceId):", deviceMid);
+  console.log("All devices:", devices);
+  console.log("===========================");
+
+  // Outdoor API state
+  const outdoorAPIState = useMemo(() => {
+    const state = templateDevice?.outdoorAPIState;
+    return state && typeof state === "string" && state.trim() !== "" ? state : null;
+  }, [templateDevice]);
+
+  // Date range
   const { startDate, endDate } = useMemo(() => {
     const today = dayjs();
-    const start = today.subtract(1, "day");
+    const start = today.subtract(1, 'day');
     return {
-      startDate: start.format("YYYY-MM-DD"),
-      endDate: today.format("YYYY-MM-DD"),
+      startDate: start.format('YYYY-MM-DD'),
+      endDate: today.format('YYYY-MM-DD'),
     };
   }, []);
 
-  // Fetch indoor AQI data for template's device
+  // FIXED: Use deviceMid for both real-time and historical data
+  const {
+    data: realtimeAQIData,
+    error: realtimeAQIError,
+    isLoading: realtimeAQILoading,
+    lastUpdated,
+  } = useGetRealtimeAQIData(deviceMid);
+
   const {
     data: aqiLogsHistory,
     error: aqiLogsError,
     isLoading: aqiLogsLoading,
   } = useGetAQILogsHistoryByDeviceID({
-    deviceId: templateDevice?.deviceId,
+    deviceId: deviceMid,
     startDate,
     endDate,
   });
 
-  // Fetch outdoor AQI data for template's device
+  // Fetch outdoor AQI data
   const {
     data: outdoorAQIData,
     isLoading: outdoorLoading,
@@ -422,10 +440,11 @@ const SetupTemplatePage = () => {
         id: 1,
         component: (
           <div className="w-[900px] h-[500px] overflow-hidden">
-            <IndoorAQIFrame
-              aqiData={aqiLogsHistory}
-              isLoading={aqiLogsLoading}
-            />
+              <IndoorAQIFrame
+      aqiData={realtimeAQIData}
+      isLoading={realtimeAQILoading}
+      lastUpdated={lastUpdated}
+    />
           </div>
         ),
         name: "Frame 1",
@@ -443,22 +462,23 @@ const SetupTemplatePage = () => {
           </div>
         ),
         name: "Frame 2",
-        thumbnail: "/frame-2.png",
+        thumbnail: "/frame-1.png",
       },
       {
         id: 3,
-        component: (
-          <div className="w-[900px] h-[500px] overflow-hidden">
-            <ComparisonScaleFrame
-              aqiData={aqiLogsHistory}
-              isLoading={aqiLogsLoading}
-              error={aqiLogsError}
-              outdoorAQIData={outdoorAQIData}
-              outdoorLoading={outdoorLoading}
-              outdoorError={outdoorError}
-            />
-          </div>
-        ),
+          component: (
+            <div className="w-[900px] h-[500px] overflow-hidden">
+              <ComparisonScaleFrame
+                aqiData={aqiLogsHistory} // Keep historical as fallback
+                realtimeAQIData={realtimeAQIData} // Add real-time data
+                isLoading={realtimeAQILoading || aqiLogsLoading} // Combine loading states
+                error={realtimeAQIError || aqiLogsError} // Combine errors
+                outdoorAQIData={outdoorAQIData}
+                outdoorLoading={outdoorLoading}
+                outdoorError={outdoorError}
+              />
+            </div>
+          ),
         name: "Frame 3",
         thumbnail: "/frame-3.png",
       },
@@ -482,17 +502,18 @@ const SetupTemplatePage = () => {
       {
         id: 5,
         component: (
-          <div className="w-[900px] h-[500px] overflow-hidden">
-            <Frame5
-              aqiData={aqiLogsHistory}
-              isLoading={aqiLogsLoading}
-              error={aqiLogsError}
-              outdoorAQIData={outdoorAQIData}
-              outdoorLoading={outdoorLoading}
-              outdoorError={outdoorError}
-            />
-          </div>
-        ),
+    <div className="w-[900px] h-[500px] overflow-hidden">
+      <ComparisonFrame
+        aqiData={aqiLogsHistory}
+        realtimeAQIData={realtimeAQIData} // Make sure this is passed
+        isLoading={realtimeAQILoading || aqiLogsLoading}
+        error={realtimeAQIError || aqiLogsError}
+        outdoorAQIData={outdoorAQIData}
+        outdoorLoading={outdoorLoading}
+        outdoorError={outdoorError}
+      />
+    </div>
+  ),
         name: "Frame 5",
         thumbnail: "/frame-5.png",
       },

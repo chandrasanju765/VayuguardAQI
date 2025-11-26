@@ -7,6 +7,7 @@ import type { AQICNGeoFeedData } from "../../../../types/aqicn";
 
 interface ComparisonScaleFrameProps {
   aqiData?: GetAQILogsHistoryByDeviceIDResponse["data"];
+  realtimeAQIData?: any;
   isLoading?: boolean;
   error?: any;
   outdoorAQIData?: AQICNGeoFeedData | null;
@@ -16,6 +17,7 @@ interface ComparisonScaleFrameProps {
 
 export const ComparisonScaleFrame = ({
   aqiData,
+  realtimeAQIData,
   isLoading,
   error,
   outdoorAQIData,
@@ -24,41 +26,46 @@ export const ComparisonScaleFrame = ({
 }: ComparisonScaleFrameProps): React.JSX.Element => {
   const selectedStandard = useAtomValue(selectedAQIStandardAtom);
 
-  // Create dynamic indoor metrics based on API data
+  // Create dynamic indoor metrics based on REAL-TIME data - NEW ORDER
   const indoorMetrics = useMemo(() => {
-    const labels = ["Humidity", "Temp", "PM 2.5", "PM 10.0", "CO2", "TVOC"];
-    const dataKeys = ["humidity", "temp", "pm2.5", "pm10.0", "co2", "tvoc"];
+    const labels = ["PM 2.5", "PM 10.0", "TVOC", "Temperature", "Humidity", "CO2"];
+    const dataKeys = ["pm2.5", "pm10.0", "tvoc", "temp", "humidity", "co2"];
     const parameterKeys = [
-      "humidity",
-      "temp",
       "pm2.5",
-      "pm10.0",
-      "co2",
+      "pm10.0", 
       "tvoc",
+      "temp",
+      "humidity",
+      "co2",
     ];
 
-    return aqiData?.indoor_avg
+    // Use real-time data if available, otherwise fall back to historical data
+    const indoorData = realtimeAQIData?.indoor_air_quality 
+      ? convertRealtimeToIndoorAvg(realtimeAQIData.indoor_air_quality)
+      : aqiData?.indoor_avg;
+
+    return indoorData
       ? createMetrics(
-          aqiData.indoor_avg,
+          indoorData,
           selectedStandard,
           labels,
           dataKeys,
           parameterKeys
         )
       : createMetrics({}, selectedStandard, labels, dataKeys, parameterKeys);
-  }, [aqiData, selectedStandard]);
+  }, [realtimeAQIData, aqiData, selectedStandard]);
 
-  // Create dynamic outdoor metrics based on AQICN API data
+  // Create dynamic outdoor metrics based on AQICN API data - NEW ORDER
   const outdoorMetrics = useMemo(() => {
-    const labels = ["Humidity", "Temp", "PM 2.5", "PM 10.0", "CO2", "TVOC"];
-    const dataKeys = ["h", "t", "pm25", "pm10", "co2", "tvoc"];
+    const labels = ["PM 2.5", "PM 10.0", "TVOC", "Temperature", "Humidity", "CO2"];
+    const dataKeys = ["pm25", "pm10", "tvoc", "t", "h", "co2"];
     const parameterKeys = [
-      "humidity",
-      "temp",
       "pm2.5",
       "pm10.0",
-      "co2",
       "tvoc",
+      "temp",
+      "humidity",
+      "co2",
     ];
 
     return outdoorAQIData?.iaqi
@@ -196,6 +203,23 @@ export const ComparisonScaleFrame = ({
       </div>
     </div>
   );
+};
+
+// Helper function to convert real-time data format to indoor_avg format
+const convertRealtimeToIndoorAvg = (indoorAirQuality: any[]): Record<string, number> => {
+  const result: Record<string, number> = {};
+  
+  if (!indoorAirQuality || !Array.isArray(indoorAirQuality)) {
+    return result;
+  }
+
+  indoorAirQuality.forEach((item: any) => {
+    if (item && item.param && (typeof item.value === 'number' || item.value === 0)) {
+      result[item.param] = item.value;
+    }
+  });
+
+  return result;
 };
 
 const Frame3 = (props: ComparisonScaleFrameProps) => {

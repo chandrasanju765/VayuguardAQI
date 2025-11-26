@@ -1,11 +1,9 @@
 import React, { useMemo } from "react";
 import { Badge } from "../../../../components/ui/badge";
 import {
-  calculateComparisonAirQualityData,
   calculatePointerPosition,
   getColorForValue,
   getQualityLabel,
-  type AQIComparisonData,
 } from "../utils";
 import { calculateAQI } from "../../../history/utils";
 import type { GetAQILogsHistoryByDeviceIDResponse } from "../../../../models/AQILogsHistory";
@@ -16,6 +14,7 @@ import type { AQICNGeoFeedData } from "../../../../types/aqicn";
 
 interface ComparisonFrameProps {
   aqiData?: GetAQILogsHistoryByDeviceIDResponse["data"];
+  realtimeAQIData?: any;
   isLoading?: boolean;
   error?: any;
   outdoorAQIData?: AQICNGeoFeedData | null;
@@ -25,6 +24,7 @@ interface ComparisonFrameProps {
 
 export const ComparisonFrame = ({
   aqiData,
+  realtimeAQIData,
   isLoading,
   error,
   outdoorAQIData,
@@ -34,27 +34,62 @@ export const ComparisonFrame = ({
   const selectedAQIStandard = useAtomValue(selectedAQIStandardAtom);
   const { formattedTime, greeting } = useCurrentTime();
 
-  const airQualityData = useMemo(() => {
-    const combinedData: AQIComparisonData = {
-      indoor_avg: aqiData?.indoor_avg,
-      outdoor_avg: {
-        "pm2.5": outdoorAQIData?.iaqi?.pm25?.v ?? null,
-      },
-    };
-    return calculateComparisonAirQualityData(combinedData, selectedAQIStandard);
-  }, [aqiData, outdoorAQIData, selectedAQIStandard]);
+  // Debug: Log the real-time data structure
+  console.log("=== COMPARISON FRAME DEBUG ===");
+  console.log("Real-time data:", realtimeAQIData);
+  console.log("indoor_air_quality:", realtimeAQIData?.indoor_air_quality);
+  console.log("==============================");
 
-  // Calculate indoor AQI from PM2.5 value for display
-  const indoorAQI = useMemo(() => {
-    const pm25 = aqiData?.indoor_avg?.["pm2.5"];
-    const pm10 = aqiData?.indoor_avg?.["pm10.0"];
-    const tvoc = aqiData?.indoor_avg?.tvoc;
-    const hcho = aqiData?.indoor_avg?.hcho;
-    if (pm25 !== null && pm25 !== undefined) {
-      return calculateAQI(pm25, pm10, tvoc, hcho, selectedAQIStandard);
+  // Get real-time PM2.5 value only - FIXED EXTRACTION
+  const realtimePM25 = useMemo(() => {
+    if (!realtimeAQIData?.indoor_air_quality) {
+      console.log("No indoor_air_quality found in real-time data");
+      return null;
     }
+    
+    console.log("Searching for pm2.5 in:", realtimeAQIData.indoor_air_quality);
+    
+    // Try different possible parameter names
+    const pm25Param = realtimeAQIData.indoor_air_quality.find(
+      (item: any) => 
+        item.param === "pm2.5" || 
+        item.param === "pm25" ||
+        item.param?.toLowerCase() === "pm2.5"
+    );
+    
+    console.log("Found PM2.5 parameter:", pm25Param);
+    
+    if (pm25Param) {
+      console.log("PM2.5 value:", pm25Param.value);
+      return pm25Param.value;
+    }
+    
+    console.log("PM2.5 parameter not found");
+    return null;
+  }, [realtimeAQIData]);
+
+  // Get historical PM2.5 as fallback
+  const historicalPM25 = useMemo(() => {
+    return aqiData?.indoor_avg?.["pm2.5"] ?? null;
+  }, [aqiData]);
+
+  console.log("Final PM2.5 values - Real-time:", realtimePM25, "Historical:", historicalPM25);
+
+  // Calculate indoor AQI from PM2.5 value - use real-time first, then historical
+  const indoorAQI = useMemo(() => {
+    const pm25 = realtimePM25 ?? historicalPM25;
+    
+    console.log("Calculating AQI with PM2.5:", pm25);
+    
+    if (pm25 !== null && pm25 !== undefined) {
+      const calculatedAQI = calculateAQI(pm25, undefined, undefined, undefined, selectedAQIStandard);
+      console.log("Calculated AQI:", calculatedAQI);
+      return calculatedAQI;
+    }
+    
+    console.log("No PM2.5 data available for AQI calculation");
     return 0;
-  }, [aqiData, selectedAQIStandard]);
+  }, [realtimePM25, historicalPM25, selectedAQIStandard]);
 
   // Get outdoor AQI directly from the API response
   const outdoorAQI = useMemo(() => {
@@ -91,10 +126,35 @@ export const ComparisonFrame = ({
     return "No Data";
   }, [outdoorAQI, selectedAQIStandard]);
 
+  // Get PM2.5 value for display with unit - ROUNDED
+  const indoorPM25Display = useMemo(() => {
+    const pm25 = realtimePM25 ?? historicalPM25;
+    if (pm25 !== null && pm25 !== undefined) {
+      return `${Math.round(pm25)} μg/m³`; // Rounded to nearest integer
+    }
+    return "No data";
+  }, [realtimePM25, historicalPM25]);
+
+  // Get outdoor PM2.5 value - ROUNDED
+  const outdoorPM25Value = useMemo(() => {
+    const pm25 = outdoorAQIData?.iaqi?.pm25?.v;
+    if (pm25 !== null && pm25 !== undefined) {
+      return Math.round(pm25); // Rounded to nearest integer
+    }
+    return null;
+  }, [outdoorAQIData]);
+
+  const outdoorPM25Display = useMemo(() => {
+    if (outdoorPM25Value !== null) {
+      return `${outdoorPM25Value} μg/m³`;
+    }
+    return "No data";
+  }, [outdoorPM25Value]);
+
   const scaleValues = ["50", "100", "200", "300", "400", "500"];
 
   const getIndicatorImage = (aqiValue: string): string => {
-    if (aqiValue === "--") return "/pointer.svg"; // fallback for no data
+    if (aqiValue === "--") return "/pointer.svg";
 
     const numericAQI = parseInt(aqiValue);
 
@@ -105,7 +165,7 @@ export const ComparisonFrame = ({
     if (numericAQI < 250) return "/pink-indicator.svg";
     if (numericAQI < 300) return "/violet-indicator.svg";
 
-    return "/violet-indicator.svg"; // for AQI >= 300
+    return "/violet-indicator.svg";
   };
 
   return (
@@ -158,17 +218,17 @@ export const ComparisonFrame = ({
       </div>
 
       <div className="w-full flex items-center justify-center gap-10 mt-10">
-        {/* INDOOR */}
+        {/* INDOOR - PM2.5 Only */}
         <div>
           <div className="relative mx-auto w-fit gap-3 mb-4">
             <p
               className="text-6xl font-bold gap-4"
               style={{ color: indoorTextColor }}
             >
-              {indoorAQI > 0 ? indoorAQI : "--"}
+              {indoorAQI > 0 ? Math.round(indoorAQI) : "--"} {/* Rounded AQI */}
             </p>
             <p className="max-w-40 text-sm mt-1">
-              {airQualityData[0]?.description || "PM 2.5 - No data available"}
+              PM 2.5 - {indoorPM25Display}
             </p>
             <Badge
               className="top-7 left-28 absolute w-32 text-[10px]"
@@ -199,12 +259,12 @@ export const ComparisonFrame = ({
 
             <img
               src={getIndicatorImage(
-                indoorAQI > 0 ? indoorAQI.toString() : "--"
+                indoorAQI > 0 ? Math.round(indoorAQI).toString() : "--" // Rounded AQI for pointer
               )}
               className="absolute -top-0.5 w-3 object-contain"
               style={{
                 left: `${calculatePointerPosition(
-                  indoorAQI > 0 ? indoorAQI.toString() : "--"
+                  indoorAQI > 0 ? Math.round(indoorAQI).toString() : "--" // Rounded AQI for pointer position
                 )}px`,
               }}
             />
@@ -213,18 +273,17 @@ export const ComparisonFrame = ({
 
         <div className="h-40 w-1 bg-gray-300 rounded-xl" />
 
-        {/* OUTDOOR */}
+        {/* OUTDOOR - PM2.5 Only */}
         <div>
           <div className="relative mx-auto w-fit gap-3 mb-4">
             <p
               className="text-6xl font-bold gap-4"
               style={{ color: outdoorTextColor }}
             >
-              {outdoorAQI > 0 ? outdoorAQI : "--"}
+              {outdoorAQI > 0 ? Math.round(outdoorAQI) : "--"} {/* Rounded AQI */}
             </p>
             <p className="max-w-40 text-sm mt-1">
-              {airQualityData[1]?.description ||
-                "PM 2.5 - No outdoor data available"}
+              PM 10.0 - {outdoorPM25Display}
             </p>
             <Badge
               className="top-7 left-28 absolute w-32 text-[10px]"
@@ -255,12 +314,12 @@ export const ComparisonFrame = ({
 
             <img
               src={getIndicatorImage(
-                outdoorAQI > 0 ? outdoorAQI.toString() : "--"
+                outdoorAQI > 0 ? Math.round(outdoorAQI).toString() : "--" // Rounded AQI for pointer
               )}
               className="absolute -top-0.5 w-3 object-contain"
               style={{
                 left: `${calculatePointerPosition(
-                  outdoorAQI > 0 ? outdoorAQI.toString() : "--"
+                  outdoorAQI > 0 ? Math.round(outdoorAQI).toString() : "--" // Rounded AQI for pointer position
                 )}px`,
               }}
             />
