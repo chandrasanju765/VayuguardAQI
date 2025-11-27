@@ -27,7 +27,7 @@ export const ComparisonFrame = ({
   aqiData,
   realtimeAQIData,
   isLoading,
-  error,
+  // error,
 }: ComparisonFrameProps): React.JSX.Element => {
 
   const selectedAQIStandard = useAtomValue(selectedAQIStandardAtom);
