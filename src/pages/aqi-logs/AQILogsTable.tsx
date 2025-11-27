@@ -16,11 +16,17 @@ export const AQILogsTable = (): JSX.Element => {
   const roleOrUserId = userRole === "admin" ? "admin" : authData?._id || "";
 
   const { data, isLoading } = useGetAQILogsByRole(roleOrUserId);
+
   const aqiLogs = data?.data || [];
   const columns = data?.columns || {};
+  console.log("aqiLogs1111", aqiLogs);
 
   const selectedDevice = useAtomValue(selectedDeviceAtom);
   const currentRangeMapping = useAtomValue(currentRangeMappingAtom);
+
+  console.log("selectedDevice", selectedDevice)
+
+  console.log("currentRangeMapping", currentRangeMapping)
 
   const { tableRows, tableColumns } = useMemo(() => {
     return processAQILogsForTable(
@@ -48,9 +54,9 @@ export const AQILogsTable = (): JSX.Element => {
         variant="default"
         className="h-full"
         actions={() => (
-          <div className="flex items-center justify-center p-1 bg-gray-50 rounded-r-lg">
-            <MoreVerticalIcon className="w-4 h-4" />
-          </div>
+        <div className="flex items-center justify-center p-1 bg-gray-50 rounded-r-lg">
+          <MoreVerticalIcon className="w-4 h-4" />
+        </div>
         )}
       />
     </div>

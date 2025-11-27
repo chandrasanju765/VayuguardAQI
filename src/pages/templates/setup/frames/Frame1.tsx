@@ -15,6 +15,7 @@ import { selectedAQIStandardAtom } from "../../../../atoms/aqiStandard";
 interface IndoorAQIFrameProps {
   aqiData?: any;
   isLoading?: boolean;
+  lastUpdated?: string;
 }
 
 const IndoorAQIFrame = ({ aqiData, isLoading }: IndoorAQIFrameProps) => {
