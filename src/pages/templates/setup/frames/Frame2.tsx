@@ -1,182 +1,60 @@
-import React, { useMemo } from "react";
-import { Badge } from "../../../../components/ui/badge";
+import { CircleIcon } from "lucide-react";
 import {
-  calculatePointerPosition,
-  getColorForValue,
-  getQualityLabel,
+  calculateOutdoorEnvironmentalMetrics,
+  calculateOutdoorAQIInfo,
+  getAQITailwindClasses,
+  getBuildingImage,
+  getBoyImage,
+  getAQIDisclaimerMessage,
 } from "../utils";
-import { calculateAQI } from "../../../history/utils";
-import type { GetAQILogsHistoryByDeviceIDResponse } from "../../../../models/AQILogsHistory";
-import { useAtomValue } from "jotai";
+import { useMemo } from "react";
+import { useAtom } from "jotai";
 import { selectedAQIStandardAtom } from "../../../../atoms/aqiStandard";
-import { useCurrentTime } from "../../../../hooks/useCurrentTime";
+import { cn } from "../../../../lib/utils";
 import type { AQICNGeoFeedData } from "../../../../types/aqicn";
 
-interface ComparisonFrameProps {
-  aqiData?: GetAQILogsHistoryByDeviceIDResponse["data"];
-  realtimeAQIData?: any;
-  isLoading?: boolean;
-  error?: any;
+interface OutdoorAQIFrameProps {
   outdoorAQIData?: AQICNGeoFeedData | null;
   outdoorLoading?: boolean;
   outdoorError?: any;
 }
 
-export const ComparisonFrame = ({
-  aqiData,
-  realtimeAQIData,
-  isLoading,
-  error,
+const OutdoorAQIFrame = ({
   outdoorAQIData,
   outdoorLoading = false,
-  outdoorError,
-}: ComparisonFrameProps): React.JSX.Element => {
-  const selectedAQIStandard = useAtomValue(selectedAQIStandardAtom);
-  const { formattedTime, greeting } = useCurrentTime();
+}: OutdoorAQIFrameProps) => {
+  const [selectedStandard] = useAtom(selectedAQIStandardAtom);
 
-  // Debug: Log all incoming data
-  console.log("=== COMPARISON FRAME DATA DEBUG ===");
-  console.log("Real-time data:", realtimeAQIData);
-  console.log("Historical data:", aqiData);
-  console.log("Selected standard:", selectedAQIStandard);
-  console.log("===================================");
+  const dynamicEnvironmentalMetrics = useMemo(() => {
+    return calculateOutdoorEnvironmentalMetrics(outdoorAQIData ?? undefined);
+  }, [outdoorAQIData]);
 
-  // Get real-time PM2.5 value only
-  const realtimePM25 = useMemo(() => {
-    if (!realtimeAQIData?.indoor_air_quality) {
-      console.log("No indoor_air_quality found in real-time data");
-      return null;
-    }
-    
-    const pm25Param = realtimeAQIData.indoor_air_quality.find(
-      (item: any) => item.param === "pm2.5"
+  const aqiInfo = useMemo(() => {
+    return calculateOutdoorAQIInfo(
+      outdoorAQIData ?? undefined,
+      selectedStandard
     );
-    
-    console.log("Real-time PM2.5 parameter:", pm25Param);
-    
-    if (pm25Param) {
-      console.log("Real-time PM2.5 value:", pm25Param.value);
-      return pm25Param.value;
-    }
-    
-    return null;
-  }, [realtimeAQIData]);
+  }, [outdoorAQIData, selectedStandard]);
 
-  // Get historical PM2.5 as fallback
-  const historicalPM25 = useMemo(() => {
-    const pm25 = aqiData?.indoor_avg?.["pm2.5"] ?? null;
-    console.log("Historical PM2.5 value:", pm25);
-    return pm25;
-  }, [aqiData]);
+  const aqiTailwindClasses = useMemo(() => {
+    return getAQITailwindClasses(aqiInfo.aqi, selectedStandard);
+  }, [aqiInfo.aqi, selectedStandard]);
 
-  // Use real-time PM2.5 first, then historical as fallback
-  const currentPM25 = realtimePM25 ?? historicalPM25;
+  const buildingImage = useMemo(() => {
+    return getBuildingImage(aqiInfo.aqi, selectedStandard);
+  }, [aqiInfo.aqi, selectedStandard]);
 
-  console.log("=== FINAL PM2.5 VALUES ===");
-  console.log("Real-time PM2.5:", realtimePM25);
-  console.log("Historical PM2.5:", historicalPM25);
-  console.log("Current PM2.5 (used for both display and calculation):", currentPM25);
-
-  // Calculate indoor AQI from the SAME PM2.5 value that we display
-  const indoorAQI = useMemo(() => {
-    if (currentPM25 !== null && currentPM25 !== undefined) {
-      console.log("Calling calculateAQI with PM2.5:", currentPM25);
-      
-      // Test the calculateAQI function with known values
-      const testAQI = calculateAQI(currentPM25, undefined, undefined, undefined, selectedAQIStandard);
-      
-      console.log("AQI Calculation Result:");
-      console.log("  Input PM2.5:", currentPM25);
-      console.log("  Output AQI:", testAQI);
-      console.log("  Expected AQI for PM2.5=207 should be around 250-270");
-      
-      return testAQI;
-    }
-    
-    console.log("No PM2.5 data available for AQI calculation");
-    return 0;
-  }, [currentPM25, selectedAQIStandard]);
-
-  // Get outdoor AQI directly from the API response
-  const outdoorAQI = useMemo(() => {
-    const aqi = outdoorAQIData?.aqi ?? 0;
-    console.log("Outdoor AQI from API:", aqi);
-    return aqi;
-  }, [outdoorAQIData]);
-
-  // Get text colors based on AQI values and selected standard
-  const indoorTextColor = useMemo(() => {
-    if (indoorAQI > 0) {
-      return getColorForValue(indoorAQI, "aqi", selectedAQIStandard).bgColor;
-    }
-    return "#6b7280"; // gray for no data
-  }, [indoorAQI, selectedAQIStandard]);
-
-  const outdoorTextColor = useMemo(() => {
-    if (outdoorAQI > 0) {
-      return getColorForValue(outdoorAQI, "aqi", selectedAQIStandard).bgColor;
-    }
-    return "#6b7280"; // gray for no data
-  }, [outdoorAQI, selectedAQIStandard]);
-
-  // Get quality labels based on AQI values and selected standard
-  const indoorQualityLabel = useMemo(() => {
-    if (indoorAQI > 0) {
-      return getQualityLabel(indoorAQI, "aqi", selectedAQIStandard);
-    }
-    return "No Data";
-  }, [indoorAQI, selectedAQIStandard]);
-
-  const outdoorQualityLabel = useMemo(() => {
-    if (outdoorAQI > 0) {
-      return getQualityLabel(outdoorAQI, "aqi", selectedAQIStandard);
-    }
-    return "No Data";
-  }, [outdoorAQI, selectedAQIStandard]);
-
-  // Get PM2.5 value for display with unit - ROUNDED
-  const indoorPM25Display = useMemo(() => {
-    if (currentPM25 !== null && currentPM25 !== undefined) {
-      return `${Math.round(currentPM25)} μg/m³`; // Rounded to nearest integer
-    }
-    return "No data";
-  }, [currentPM25]);
-
-  // Get outdoor PM2.5 value - ROUNDED
-  const outdoorPM25Value = useMemo(() => {
-    const pm25 = outdoorAQIData?.iaqi?.pm25?.v;
-    if (pm25 !== null && pm25 !== undefined) {
-      return Math.round(pm25); // Rounded to nearest integer
-    }
-    return null;
-  }, [outdoorAQIData]);
-
-  const outdoorPM25Display = useMemo(() => {
-    if (outdoorPM25Value !== null) {
-      return `${outdoorPM25Value} μg/m³`;
-    }
-    return "No data";
-  }, [outdoorPM25Value]);
-
-  const scaleValues = ["50", "100", "200", "300", "400", "500"];
-
-  const getIndicatorImage = (aqiValue: string): string => {
-    if (aqiValue === "--") return "/pointer.svg";
-
-    const numericAQI = parseInt(aqiValue);
-
-    if (numericAQI < 50) return "/green-indicator.svg";
-    if (numericAQI < 100) return "/yellow-indicator.svg";
-    if (numericAQI < 150) return "/orange-indicator.svg";
-    if (numericAQI < 200) return "/red-indicator.svg";
-    if (numericAQI < 250) return "/pink-indicator.svg";
-    if (numericAQI < 300) return "/violet-indicator.svg";
-
-    return "/violet-indicator.svg";
-  };
-
+  const boyImage = useMemo(() => {
+    return getBoyImage(aqiInfo.aqi, selectedStandard);
+  }, [aqiInfo.aqi, selectedStandard]);
+  
   return (
-    <div className="bg-neutral-100 relative w-[900px] h-[500px]">
+    <div
+      className={cn(
+        "w-[900px] h-[500px] bg-gradient-to-b from-gray-100 overflow-hidden shadow-2xl p-4 relative",
+        aqiTailwindClasses.gradient
+      )}
+    >
       {/* Logo in top right corner */}
       <div className="absolute top-4 right-4 z-20">
         <img 
@@ -186,159 +64,176 @@ export const ComparisonFrame = ({
         />
       </div>
 
-      {/* Loading State */}
-      {(isLoading || outdoorLoading) && (
+      <h1 className="text-center text-2xl font-semibold mt-4">Outdoor</h1>
+
+      {/* Loading/Error States */}
+      {outdoorLoading && (
         <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-20">
           <div className="bg-white p-4 rounded-lg shadow-lg">
-            <p className="text-gray-700">
-              {isLoading && outdoorLoading
-                ? "Loading comparison data..."
-                : isLoading
-                ? "Loading indoor data..."
-                : "Loading outdoor data..."}
-            </p>
+            <p className="text-gray-700">Loading outdoor data...</p>
           </div>
         </div>
       )}
 
-      {/* Error State */}
-      {(error || outdoorError) && !isLoading && !outdoorLoading && (
-        <div className="absolute top-16 left-6 right-6 bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded z-10">
-          <p className="text-sm">Error in loading data</p>
-        </div>
-      )}
-
-      <div className="w-full h-44 bg-[linear-gradient(90deg,rgba(132,250,222,0.65)_0%,rgba(143,211,244,0.65)_100%)] relative">
-        <div className="h-full flex items-center pl-20">
-          <p>
-            {formattedTime}
-            <br />
-            <span className="font-bold">{greeting}</span>
-          </p>
-        </div>
-
-        <img
-          className="absolute w-[240px] bottom-0 right-20"
-          alt="City skyline pana"
-          src="/colorful-building.svg"
-        />
+      <div className="w-full grid grid-cols-4 mt-4">
+        {dynamicEnvironmentalMetrics.slice(0, 4).map((metric, index) => (
+          <div
+            key={index}
+            className={cn(
+              "w-[170px] flex items-center justify-between gap-1 p-2 rounded-xl h-fit"
+            )}
+            style={{
+              border: `4px solid ${metric.textColor}`,
+            }}
+          >
+            <img
+              src={metric.icon}
+              alt={metric.alt}
+              className="w-10 max-h-10 object-contain"
+            />
+            <div className="flex flex-col items-start gap-[5px]">
+              <div className="text-gray-700">{metric.label}</div>
+              <div
+                className="text-xl font-semibold"
+                style={{ color: metric.textColor }}
+              >
+                {metric.value}
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="w-full flex items-center justify-center gap-10 mt-10">
-        {/* INDOOR - PM2.5 Only */}
-        <div>
-          <div className="relative mx-auto w-fit gap-3 mb-4">
-            <p
-              className="text-6xl font-bold gap-4"
-              style={{ color: indoorTextColor }}
-            >
-              {indoorAQI > 0 ? Math.round(indoorAQI) : "--"} {/* Rounded AQI */}
-            </p>
-            <p className="max-w-40 text-sm mt-1">
-              PM 2.5 - {indoorPM25Display}
-            </p>
-            <Badge
-              className="top-7 left-28 absolute w-32 text-[10px]"
-              style={{ color: indoorTextColor }}
-            >
-              {indoorQualityLabel}
-            </Badge>
+      <div className="grid grid-cols-4 mt-4">
+        {dynamicEnvironmentalMetrics.slice(4, 5).map((metric, index) => (
+          <div
+            key={index}
+            className={cn(
+              "w-[170px] flex items-center justify-between gap-1 p-2 rounded-xl h-fit"
+            )}
+            style={{
+              border: `4px solid ${metric.textColor}`,
+            }}
+          >
+            <img src={metric.icon} alt={metric.alt} className="w-10" />
+            <div className="flex flex-col items-start gap-[5px]">
+              <div className="text-gray-700">{metric.label}</div>
+              <div
+                className="text-xl font-semibold"
+                style={{ color: metric.textColor }}
+              >
+                {metric.value}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div className="col-span-2 relative">
+          <div
+            className="w-3 h-60 rounded-lg mx-auto border-[1px] border-gray-900 relative z-10"
+            style={{
+              background:
+                "linear-gradient(0deg, #A053F6 0%, #B33FBA 16.66%, #E95478 33.32%, #EA8C34 50%, #EAAF01 66.64%, #59B61F 83.33%)",
+            }}
+            aria-hidden="true"
+          >
+            <CircleIcon
+              className={cn(
+                "w-4 h-4 rounded-full absolute left-[50%] right-[0%] translate-x-[-50%]",
+                aqiTailwindClasses.meter
+              )}
+              stroke="#fff"
+              strokeWidth={8}
+              fill="none"
+            />
           </div>
 
-          <div className="relative">
-            <div
-              className="w-80 h-6 rounded-2xl"
-              style={{
-                background:
-                  "linear-gradient(90deg, #59B61F 0%, #EAAF01 16.66%, #EA8C34 33.32%, #E95478 50%, #B33FBA 66.64%, #A053F6 83.33%)",
-              }}
-            />
-            <div className="flex w-72 h-2 items-center justify-between absolute top-2 left-3.5 z-10">
-              {scaleValues.map((value, scaleIndex) => (
+          <div className="absolute right-0 top-12 flex flex-col justify-between z-10">
+            <div>
+              <div className="flex gap-2">
                 <div
-                  key={scaleIndex}
-                  className="font-semibold text-white text-[5.1px]"
+                  className={cn(
+                    "w-5 h-5 rounded-full flex justify-center items-center",
+                    aqiTailwindClasses.bg
+                  )}
                 >
-                  {value}
+                  <div
+                    className={cn(
+                      "w-2 h-2 rounded-full",
+                      aqiTailwindClasses.dot
+                    )}
+                  ></div>
                 </div>
-              ))}
+                <p className="text-sm font-medium">LIVE AQI</p>
+              </div>
+              <p className="text-6xl font-semibold mt-2">{aqiInfo.aqi}</p>
             </div>
 
-            <img
-              src={getIndicatorImage(
-                indoorAQI > 0 ? Math.round(indoorAQI).toString() : "--" // Rounded AQI for pointer
-              )}
-              className="absolute -top-0.5 w-3 object-contain"
-              style={{
-                left: `${calculatePointerPosition(
-                  indoorAQI > 0 ? Math.round(indoorAQI).toString() : "--" // Rounded AQI for pointer position
-                )}px`,
-              }}
-            />
+            <div className="font-medium mt-6">
+              <p>Air Quality is</p>
+              <div
+                className="text-xs font-semibold px-3 py-0.5 w-fit rounded mt-1 text-wrap max-w-[150px]"
+                style={{
+                  backgroundColor: aqiInfo.colors.bgColor,
+                  color: aqiInfo.colors.textColor,
+                }}
+              >
+                {aqiInfo.quality}
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="h-40 w-1 bg-gray-300 rounded-xl" />
-
-        {/* OUTDOOR - PM2.5 Only */}
-        <div>
-          <div className="relative mx-auto w-fit gap-3 mb-4">
-            <p
-              className="text-6xl font-bold gap-4"
-              style={{ color: outdoorTextColor }}
-            >
-              {outdoorAQI > 0 ? Math.round(outdoorAQI) : "--"} {/* Rounded AQI */}
-            </p>
-            <p className="max-w-40 text-sm mt-1">
-              PM 2.5 - {outdoorPM25Display}
-            </p>
-            <Badge
-              className="top-7 left-28 absolute w-32 text-[10px]"
-              style={{ color: outdoorTextColor }}
-            >
-              {outdoorQualityLabel}
-            </Badge>
-          </div>
-
-          <div className="relative">
-            <div
-              className="w-80 h-6 rounded-2xl"
-              style={{
-                background:
-                  "linear-gradient(90deg, #59B61F 0%, #EAAF01 16.66%, #EA8C34 33.32%, #E95478 50%, #B33FBA 66.64%, #A053F6 83.33%)",
-              }}
-            />
-            <div className="flex w-72 h-2 items-center justify-between absolute top-2 left-3.5 z-10">
-              {scaleValues.map((value, scaleIndex) => (
-                <div
-                  key={scaleIndex}
-                  className="font-semibold text-white text-[5.1px]"
-                >
-                  {value}
-                </div>
-              ))}
+        {dynamicEnvironmentalMetrics.slice(5, 6).map((metric, index) => (
+          <div
+            key={index}
+            className={cn(
+              "w-[170px] flex items-center justify-between gap-1 p-2 rounded-xl h-fit"
+            )}
+            style={{
+              border: `4px solid ${metric.textColor}`,
+            }}
+          >
+            <img src={metric.icon} alt={metric.alt} className="w-10" />
+            <div className="flex flex-col items-start gap-[5px]">
+              <div className="text-gray-700">{metric.label}</div>
+              <div
+                className="text-xl font-semibold"
+                style={{ color: metric.textColor }}
+              >
+                {metric.value}
+              </div>
             </div>
-
-            <img
-              src={getIndicatorImage(
-                outdoorAQI > 0 ? Math.round(outdoorAQI).toString() : "--" // Rounded AQI for pointer
-              )}
-              className="absolute -top-0.5 w-3 object-contain"
-              style={{
-                left: `${calculatePointerPosition(
-                  outdoorAQI > 0 ? Math.round(outdoorAQI).toString() : "--" // Rounded AQI for pointer position
-                )}px`,
-              }}
-            />
           </div>
-        </div>
+        ))}
       </div>
+
+      <p className="z-10 relative ml-6 mt-10">
+        * {getAQIDisclaimerMessage(aqiInfo.aqi, selectedStandard)}
+      </p>
+
+      <img
+        src={boyImage}
+        alt="Outdoor Air Quality"
+        className="absolute bottom-4 right-20 z-10 object-contain h-52"
+      />
+      <img
+        src={buildingImage}
+        alt="Building"
+        className="absolute bottom-0 left-16"
+      />
+      <img
+        src="/building-shadow.svg"
+        alt="Building Shadow"
+        className="absolute bottom-0 right-0"
+      />
+      <img
+        src="/building-shadow.svg"
+        alt="Building Shadow"
+        className="absolute bottom-0 -left-[122px]"
+      />
     </div>
   );
 };
 
-const Frame2 = (props: ComparisonFrameProps) => {
-  return <ComparisonFrame {...props} />;
-};
-
-export default Frame2;
+export default OutdoorAQIFrame;

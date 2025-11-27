@@ -13,12 +13,13 @@ import {
   useGetAQIDevices,
   useGetAQILogsHistoryByDeviceID,
   useGetOutdoorAQIData,
-  useGetRealtimeAQIData, 
+  useGetLatestAQILogByDevice,
 } from "../../../data/cachedQueries";
 import toast from "react-hot-toast";
 import BlankCanvas from "./frames/BlankCanvas";
 import dayjs from "dayjs";
 import type { AQIDevice } from "../../../models/AQIDevices";
+import { getCurrentUser } from "../../../utils";
 
 interface MediaFile {
   id: string;
@@ -60,393 +61,288 @@ const SetupTemplatePage = () => {
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
   const [removedFrameIds, setRemovedFrameIds] = useState<number[]>([]);
   const slideshowIntervalRef = useRef<number | null>(null);
-  // Track which predefined frames are currently selected to show
+
   const [currentDefaultFrames, setCurrentDefaultFrames] = useState<number[]>([
     1, 2, 3, 4, 5,
   ]);
 
-  // Template-to-frames mapping for dropdown selection
   const TEMPLATE_TO_FRAMES: Record<string, number[]> = {
-    "tmpl-1": [1, 2, 3, ],
-    "tmpl-2": [ 4],
+    "tmpl-1": [1, 2, 3],
+    "tmpl-2": [4],
     "tmpl-3": [1, 2, 3, 5],
   };
 
-  // Helpers for predefined frames
-  const getAvailablePredefinedIds = (): number[] => {
-    return currentDefaultFrames.filter((id) => !removedFrameIds.includes(id));
-  };
-
-  const getFirstAvailablePredefinedId = (): number | null => {
-    const ids = getAvailablePredefinedIds();
-    return ids.length > 0 ? ids[0] : null;
-  };
-
-  const getFirstAvailableSlideId = (
-    includeBlankCanvases: boolean = true
-  ): number | null => {
-    const firstPre = getFirstAvailablePredefinedId();
-    if (firstPre !== null) return firstPre;
-    // fall back to first canvas if any
-    const canvasIds = getAvailableCanvasIds(includeBlankCanvases);
-    return canvasIds.length > 0 ? canvasIds[0] : null;
-  };
-
-  const getAvailableCanvasIds = (
-    includeBlankCanvases: boolean = true
-  ): number[] =>
-    customCanvases
-      .map((canvas, index) => ({
-        id: 1000 + index,
-        hasImage: !!canvas.image,
-      }))
-      .filter((c) => (includeBlankCanvases ? true : c.hasImage))
-      .map((c) => c.id);
-
-  const getAvailableSlideIds = (
-    includeBlankCanvases: boolean = true
-  ): number[] => [
-    ...getAvailablePredefinedIds(),
-    ...getAvailableCanvasIds(includeBlankCanvases),
-  ];
-
-  const getNextAvailableSlideId = (
-    current: number | null,
-    includeBlankCanvases: boolean = true
-  ): number => {
-    const ids = getAvailableSlideIds(includeBlankCanvases);
-    if (ids.length === 0) return 0; // placeholder
-    if (current === null) return ids[0];
-    const idx = ids.indexOf(current);
-    if (idx === -1) return ids[0];
-    return ids[(idx + 1) % ids.length];
-  };
-
-  const handleSaveTemplate = async () => {
-    if (!templateId) {
-      toast.error("No template ID provided");
-      return;
-    }
-
-    if (!templateData) {
-      toast.error("Template data not loaded");
-      return;
-    }
-
-    try {
-      // Extract thumbnail URLs from all media files
-      const thumbnailUrls = mediaFiles
-        .filter((media) => media.thumbnailUrl)
-        .map((media) => {
-          // Remove API base URL for existing template media, keep as-is for uploaded media
-          return media.isExisting
-            ? media.thumbnailUrl!.replace(import.meta.env.VITE_API_BASE_URL, "")
-            : media.thumbnailUrl!;
-        });
-
-      // Extract frame URLs from all media files
-      const frameUrls = mediaFiles
-        .filter((media) => media.frameUrl)
-        .map((media) => {
-          // Remove API base URL for existing template media, keep as-is for uploaded media
-          return media.isExisting
-            ? media.frameUrl!.replace(import.meta.env.VITE_API_BASE_URL, "")
-            : media.frameUrl!;
-        });
-
-      // Use currentDefaultFrames (kept in sync with dropdown and removals)
-      const defaultFrames = currentDefaultFrames.filter(
-        (frameId) => !removedFrameIds.includes(frameId)
-      );
-
-      // Process canvas image to remove API base URL if present
-      const processedCanvases = customCanvases.map((canvas) => ({
-        ...canvas,
-        image: canvas.image
-          ? {
-              ...canvas.image,
-              url: canvas.image.url.startsWith(
-                import.meta.env.VITE_API_BASE_URL
-              )
-                ? canvas.image.url.replace(
-                    import.meta.env.VITE_API_BASE_URL,
-                    ""
-                  )
-                : canvas.image.url,
-              sourceUrl: canvas.image.sourceUrl?.startsWith(
-                import.meta.env.VITE_API_BASE_URL
-              )
-                ? canvas.image.sourceUrl.replace(
-                    import.meta.env.VITE_API_BASE_URL,
-                    ""
-                  )
-                : canvas.image.sourceUrl,
-            }
-          : undefined,
-      }));
-
-      // Create new template structure
-      const templateBody = {
-        thumbnails: thumbnailUrls,
-        frames: frameUrls,
-        defaultFrames: defaultFrames,
-        canvases: processedCanvases,
-      };
-
-      await saveTemplate({
-        _id: templateId,
-        body: {
-          colorStandard: templateData.colorStandard || "WHO",
-          template: templateBody,
-        },
-      });
-
-      // Refresh template data after saving
-      mutateTemplate();
-
-      toast.success("Template saved successfully!");
-    } catch (error) {
-      console.error("Failed to save template:", error);
-      toast.error("Failed to save template. Please try again.");
-    }
-  };
-
-  // Fetch template data
   const {
     data: templateData,
-    error: templateError,
     isLoading: templateLoading,
+    error: templateError,
     mutate: mutateTemplate,
   } = useGetTemplateById(templateId);
 
-  // Fetch all devices
   const { data: devicesData } = useGetAQIDevices();
   const devices: AQIDevice[] = useMemo(() => {
-    const devicesRaw = (devicesData as any) || [];
-    return Array.isArray(devicesRaw)
-      ? devicesRaw
-      : Array.isArray(devicesRaw?.data)
-      ? (devicesRaw.data as AQIDevice[])
-      : [];
+    const raw = devicesData || [];
+    return Array.isArray(raw) ? raw : raw?.data || [];
   }, [devicesData]);
 
-  // FIXED: Get the device ID correctly
-  const templateDeviceId = useMemo(() => {
-    if (!templateData?.deviceId) return null;
-    return (templateData.deviceId as string) || null;
-  }, [templateData]);
+  const templateDeviceId = templateData?.deviceId || null;
 
-  // FIXED: Find the device by _id (not mid)
   const templateDevice = useMemo(() => {
     if (!templateDeviceId) return null;
-    return devices.find((device) => device._id === templateDeviceId) || null;
+    return devices.find((d) => d._id === templateDeviceId) || null;
   }, [templateDeviceId, devices]);
 
-  // FIXED: Use deviceId from the device object (not mid)
-  const deviceMid = useMemo(() => {
-    return templateDevice?.deviceId || null;
-  }, [templateDevice]);
+  const deviceMid = templateDevice?.deviceId || null;
 
-  console.log("=== DEVICE DEBUG ===");
-  console.log("Template deviceId:", templateDeviceId);
-  console.log("Found device:", templateDevice);
-  console.log("Device MID (deviceId):", deviceMid);
-  console.log("All devices:", devices);
-  console.log("===========================");
+  console.log("DEVICE MID SELECTED:", deviceMid);
 
-  // Outdoor API state
+
   const outdoorAPIState = useMemo(() => {
-    const state = templateDevice?.outdoorAPIState;
-    return state && typeof state === "string" && state.trim() !== "" ? state : null;
+    const x = templateDevice?.outdoorAPIState;
+    return x && x.trim() !== "" ? x : null;
   }, [templateDevice]);
 
-  // Date range
-  const { startDate, endDate } = useMemo(() => {
-    const today = dayjs();
-    const start = today.subtract(1, 'day');
-    return {
-      startDate: start.format('YYYY-MM-DD'),
-      endDate: today.format('YYYY-MM-DD'),
-    };
-  }, []);
+  // ---------------------------------
+  // 1️⃣ GET LATEST AQI LOG (correct API)
+  // ---------------------------------
+  const authData = getCurrentUser();
+ const roleOrUserId: string = authData?.role === "admin"
+  ? "admin"
+  : authData?._id || "user";
 
-  // FIXED: Use deviceMid for both real-time and historical data
+
   const {
-    data: realtimeAQIData,
-    error: realtimeAQIError,
-    isLoading: realtimeAQILoading,
-  } = useGetRealtimeAQIData(deviceMid);
+    data: latestAQIData,
+    isLoading: latestAQILoading,
+    error: latestAQIError,
+  } = useGetLatestAQILogByDevice(deviceMid, roleOrUserId);
+
+  // ---------------------------------
+  // 2️⃣ GET HISTORY (for Frame 3, Frame 4, Frame 5)
+  // ---------------------------------
+  const today = dayjs();
+  const startDate = today.subtract(1, "day").format("YYYY-MM-DD");
+  const endDate = today.format("YYYY-MM-DD");
 
   const {
     data: aqiLogsHistory,
-    error: aqiLogsError,
     isLoading: aqiLogsLoading,
-  } = useGetAQILogsHistoryByDeviceID({
-    deviceId: deviceMid,
-    startDate,
-    endDate,
-  });
+    error: aqiLogsError,
+  } = useGetAQILogsHistoryByDeviceID({ deviceId: deviceMid, startDate, endDate });
 
-  // Fetch outdoor AQI data
+  // ---------------------------------
+  // 3️⃣ OUTDOOR API
+  // ---------------------------------
   const {
     data: outdoorAQIData,
     isLoading: outdoorLoading,
     error: outdoorError,
   } = useGetOutdoorAQIData(outdoorAPIState);
 
-  // Function to convert template thumbnails and frames to MediaFile objects
-  const convertTemplateMediaToObjects = (
-    thumbnails: string[],
-    frames: string[]
-  ): MediaFile[] => {
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+  // ---------------------------------
+  // Helper functions for slides/canvases
+  // ---------------------------------
+  const getAvailablePredefinedIds = () =>
+    currentDefaultFrames.filter((id) => !removedFrameIds.includes(id));
 
-    return thumbnails.map((thumbnailPath, index) => {
-      // Handle both relative and absolute URLs for thumbnails
-      const thumbnailUrl = thumbnailPath.startsWith("http")
-        ? thumbnailPath
-        : `${apiBaseUrl}${thumbnailPath}`;
-
-      // Handle both relative and absolute URLs for frames
-      const frameUrl = frames[index]
-        ? frames[index].startsWith("http")
-          ? frames[index]
-          : `${apiBaseUrl}${frames[index]}`
-        : undefined;
-
-      // Determine file type from frame URL or thumbnail URL
-      const urlToCheck = frameUrl || thumbnailUrl;
-      const extension = urlToCheck.split(".").pop()?.toLowerCase() || "";
-      const isVideo = ["mp4", "webm", "ogg", "avi", "mov"].includes(extension);
-
-      return {
-        id: `template-${index}`,
-        thumbnailUrl: thumbnailUrl,
-        frameUrl: frameUrl,
-        name: isVideo ? "Video" : "Image",
-        type: isVideo ? "video" : "image",
-        isExisting: true,
-      };
-    });
+  const getFirstAvailablePredefinedId = () => {
+    const ids = getAvailablePredefinedIds();
+    return ids.length > 0 ? ids[0] : null;
   };
 
-  // Effect to populate templateMedia when templateData loads
+  const getAvailableCanvasIds = (includeBlank = true) =>
+    customCanvases
+      .map((c, i) => ({
+        id: 1000 + i,
+        hasImage: !!c.image,
+      }))
+      .filter((x) => (includeBlank ? true : x.hasImage))
+      .map((x) => x.id);
+
+  const getAvailableSlideIds = (includeBlank = true) => [
+    ...getAvailablePredefinedIds(),
+    ...getAvailableCanvasIds(includeBlank),
+  ];
+
+  const getNextAvailableSlideId = (
+    current: number | null,
+    includeBlank = true
+  ) => {
+    const ids = getAvailableSlideIds(includeBlank);
+    if (ids.length === 0) return 0;
+    if (current === null) return ids[0];
+    const idx = ids.indexOf(current);
+    return idx === -1 ? ids[0] : ids[(idx + 1) % ids.length];
+  };
+
+  // ---------------------------------
+  // Save Template
+  // ---------------------------------
+  const handleSaveTemplate = async () => {
+    if (!templateId) return toast.error("No template ID provided");
+    if (!templateData) return toast.error("Template data not loaded");
+
+    try {
+      const thumbnailUrls = mediaFiles
+        .filter((m) => m.thumbnailUrl)
+        .map((m) =>
+          m.isExisting
+            ? m.thumbnailUrl!.replace(import.meta.env.VITE_API_BASE_URL, "")
+            : m.thumbnailUrl!
+        );
+
+      const frameUrls = mediaFiles
+        .filter((m) => m.frameUrl)
+        .map((m) =>
+          m.isExisting
+            ? m.frameUrl!.replace(import.meta.env.VITE_API_BASE_URL, "")
+            : m.frameUrl!
+        );
+
+      const defaultFrames = currentDefaultFrames.filter(
+        (id) => !removedFrameIds.includes(id)
+      );
+
+      const processedCanvases = customCanvases.map((canvas) => ({
+        ...canvas,
+        image: canvas.image
+          ? {
+              ...canvas.image,
+              url: canvas.image.url.replace(import.meta.env.VITE_API_BASE_URL, ""),
+              sourceUrl: canvas.image.sourceUrl?.replace(
+                import.meta.env.VITE_API_BASE_URL,
+                ""
+              ),
+            }
+          : undefined,
+      }));
+
+      await saveTemplate({
+        _id: templateId,
+        body: {
+          colorStandard: templateData.colorStandard || "WHO",
+          template: {
+            thumbnails: thumbnailUrls,
+            frames: frameUrls,
+            defaultFrames,
+            canvases: processedCanvases,
+          },
+        },
+      });
+
+      mutateTemplate();
+      toast.success("Template saved successfully!");
+    } catch (err) {
+      console.error("Failed to save template:", err);
+      toast.error("Failed to save template.");
+    }
+  };
+
+  // ---------------------------------
+  // Load template media + canvases
+  // ---------------------------------
   useEffect(() => {
-    if (templateData?.template && templateData.template.thumbnails) {
-      // Extract thumbnails and frames from new template structure
+    if (templateData?.template?.thumbnails) {
       const thumbnails = templateData.template.thumbnails;
       const frames = templateData.template.frames || [];
 
-      if (thumbnails.length > 0) {
-        const media = convertTemplateMediaToObjects(thumbnails, frames);
-        setMediaFiles(media);
-      } else {
-        setMediaFiles([]);
-      }
+      const media = thumbnails.map((thumb, index) => {
+        const base = import.meta.env.VITE_API_BASE_URL;
+        const thumbnailUrl = thumb.startsWith("http") ? thumb : `${base}${thumb}`;
+        const frameUrl =
+          frames[index]?.startsWith("http") ? frames[index] : `${base}${frames[index]}`;
+
+        const ext = (frameUrl || thumbnailUrl).split(".").pop()?.toLowerCase();
+        const isVideo = ["mp4", "webm", "ogg", "avi", "mov"].includes(ext || "");
+
+        return {
+          id: `template-${index}`,
+          thumbnailUrl,
+          frameUrl,
+          name: isVideo ? "Video" : "Image",
+         type: (isVideo ? "video" : "image") as "video" | "image",
+          isExisting: true,
+        };
+      });
+
+      setMediaFiles(media);
     } else {
       setMediaFiles([]);
     }
 
-    // Load custom canvases if they exist
     if (
       templateData?.template?.canvases &&
       Array.isArray(templateData.template.canvases)
     ) {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-
-      const loadedCanvases = templateData.template.canvases.map(
-        (canvas: CustomCanvas) => ({
-          ...canvas,
-          image: canvas.image
-            ? {
-                ...canvas.image,
-                url: canvas.image.url.startsWith("http")
-                  ? canvas.image.url
-                  : `${apiBaseUrl}${canvas.image.url}`,
-                sourceUrl: canvas.image.sourceUrl
-                  ? canvas.image.sourceUrl.startsWith("http")
-                    ? canvas.image.sourceUrl
-                    : `${apiBaseUrl}${canvas.image.sourceUrl}`
-                  : undefined,
-              }
-            : undefined,
-        })
-      );
-
-      setCustomCanvases(loadedCanvases);
+      const base = import.meta.env.VITE_API_BASE_URL;
+      const loaded = templateData.template.canvases.map((c: CustomCanvas) => ({
+        ...c,
+        image: c.image
+          ? {
+              ...c.image,
+              url: c.image.url.startsWith("http")
+                ? c.image.url
+                : `${base}${c.image.url}`,
+              sourceUrl: c.image.sourceUrl
+                ? c.image.sourceUrl.startsWith("http")
+                  ? c.image.sourceUrl
+                  : `${base}${c.image.sourceUrl}`
+                : undefined,
+            }
+          : undefined,
+      }));
+      setCustomCanvases(loaded);
     } else {
       setCustomCanvases([]);
     }
 
-    // Reset removed frames when template data changes
     setRemovedFrameIds([]);
-    // Initialize currentDefaultFrames from backend if available; otherwise from selection
-    if (
-      templateData?.template?.defaultFrames &&
-      templateData.template.defaultFrames.length > 0
-    ) {
+
+    if (templateData?.template?.defaultFrames?.length) {
       setCurrentDefaultFrames(templateData.template.defaultFrames);
     } else {
-      setCurrentDefaultFrames(
-        TEMPLATE_TO_FRAMES[selectedTemplate] || [1, 2, 3, 4, 5]
-      );
+      setCurrentDefaultFrames(TEMPLATE_TO_FRAMES[selectedTemplate]);
     }
 
-    // After setting frames, ensure active slide is valid; otherwise select placeholder (0)
-    const first = (
-      templateData?.template?.defaultFrames &&
-      templateData.template.defaultFrames.length > 0
-        ? templateData.template.defaultFrames
-        : TEMPLATE_TO_FRAMES[selectedTemplate] || [1, 2, 3, 4, 5]
-    ).find((id) => !removedFrameIds.includes(id));
-    if (!first) {
-      setActiveSlide(0);
-    } else if (
-      activeSlide < 1 ||
-      activeSlide > 5 ||
-      removedFrameIds.includes(activeSlide)
-    ) {
-      setActiveSlide(first);
-    }
+    const first = getFirstAvailablePredefinedId();
+    setActiveSlide(first ?? 0);
   }, [templateData]);
 
-  // Handle template change from header dropdown
+  // ---------------------------------
+  // Handle template dropdown
+  // ---------------------------------
   const handleTemplateChange = (value: string | null) => {
     if (value) {
       setSelectedTemplate(value);
-      // Refresh default frames to match the selected template type
-      setCurrentDefaultFrames(TEMPLATE_TO_FRAMES[value] || [1, 2, 3, 4, 5]);
+      setCurrentDefaultFrames(TEMPLATE_TO_FRAMES[value]);
     }
-    // Reset removed frames when template changes so all frames for the template come back
     setRemovedFrameIds([]);
-    // Reset to first available slide or placeholder
-    const first = (
-      TEMPLATE_TO_FRAMES[value || selectedTemplate] || [1, 2, 3, 4, 5]
-    ).find((id) => !removedFrameIds.includes(id));
+    const first = TEMPLATE_TO_FRAMES[value || selectedTemplate][0];
     setActiveSlide(first ?? 0);
-    // If slideshow is running, restart it
-    if (isSlideshow) {
-      stopSlideshow();
-      startSlideshow();
-    }
+    if (isSlideshow) stopSlideshow(), startSlideshow();
   };
 
-  // Filter predefined slides based on currentDefaultFrames
+  // ---------------------------------
+  // Slides list
+  // ---------------------------------
   const getFilteredPredefinedSlides = () => {
     const allSlides = [
       {
         id: 1,
         component: (
           <div className="w-[900px] h-[500px] overflow-hidden">
-              <IndoorAQIFrame
-              aqiData={realtimeAQIData}
-              isLoading={realtimeAQILoading}
-            />
+            <IndoorAQIFrame
+  aqiData={deviceMid ? latestAQIData : undefined}
+  isLoading={!deviceMid || latestAQILoading}
+  lastUpdated={latestAQIData?.timestamp}
+/>
+
           </div>
         ),
         name: "Frame 1",
         thumbnail: "/frame-1.png",
       },
+
       {
         id: 2,
         component: (
@@ -461,81 +357,73 @@ const SetupTemplatePage = () => {
         name: "Frame 2",
         thumbnail: "/frame-1.png",
       },
+
       {
         id: 3,
-          component: (
-            <div className="w-[900px] h-[500px] overflow-hidden">
-              <ComparisonScaleFrame
-                aqiData={aqiLogsHistory} // Keep historical as fallback
-                realtimeAQIData={realtimeAQIData} // Add real-time data
-                isLoading={realtimeAQILoading || aqiLogsLoading} // Combine loading states
-                error={realtimeAQIError || aqiLogsError} // Combine errors
-                outdoorAQIData={outdoorAQIData}
-                outdoorLoading={outdoorLoading}
-                outdoorError={outdoorError}
-              />
-            </div>
-          ),
-        name: "Frame 3",
-        thumbnail: "/frame-3.png",
-      },
-      {
-        id: 4,
         component: (
           <div className="w-[900px] h-[500px] overflow-hidden">
-            <ComparisonFrame
+            <ComparisonScaleFrame
               aqiData={aqiLogsHistory}
-              isLoading={aqiLogsLoading}
-              error={aqiLogsError}
+              realtimeAQIData={latestAQIData}
+              isLoading={latestAQILoading || aqiLogsLoading}
+              error={latestAQIError || aqiLogsError}
               outdoorAQIData={outdoorAQIData}
               outdoorLoading={outdoorLoading}
               outdoorError={outdoorError}
             />
           </div>
         ),
-        name: "Frame 4",
-        thumbnail: "/frame-4.png",
+        name: "Frame 3",
+        thumbnail: "/frame-3.png",
       },
-      {
-        id: 5,
-        component: (
+{
+  id: 4,
+  component: (
     <div className="w-[900px] h-[500px] overflow-hidden">
       <ComparisonFrame
         aqiData={aqiLogsHistory}
-        realtimeAQIData={realtimeAQIData} // Make sure this is passed
-        isLoading={realtimeAQILoading || aqiLogsLoading}
-        error={realtimeAQIError || aqiLogsError}
+        realtimeAQIData={latestAQIData}     // ← ADD THIS
+        isLoading={latestAQILoading || aqiLogsLoading}
+        error={latestAQIError || aqiLogsError}
         outdoorAQIData={outdoorAQIData}
         outdoorLoading={outdoorLoading}
         outdoorError={outdoorError}
       />
     </div>
   ),
+  name: "Frame 4",
+  thumbnail: "/frame-4.png",
+},
+
+      {
+        id: 5,
+        component: (
+          <div className="w-[900px] h-[500px] overflow-hidden">
+            <ComparisonFrame
+              aqiData={aqiLogsHistory}
+              realtimeAQIData={latestAQIData}
+              isLoading={latestAQILoading || aqiLogsLoading}
+              error={latestAQIError || aqiLogsError}
+              outdoorAQIData={outdoorAQIData}
+              outdoorLoading={outdoorLoading}
+              outdoorError={outdoorError}
+            />
+          </div>
+        ),
         name: "Frame 5",
         thumbnail: "/frame-5.png",
       },
     ];
 
-    // Use currentDefaultFrames (kept in sync with backend or selection)
-    const framesToInclude: number[] = currentDefaultFrames;
-
     return allSlides.filter(
-      (slide) =>
-        framesToInclude.includes(slide.id) &&
-        !removedFrameIds.includes(slide.id)
+      (s) =>
+        currentDefaultFrames.includes(s.id) &&
+        !removedFrameIds.includes(s.id)
     );
   };
 
-  const getMaxSlideId = () => {
-    const predefined = getFilteredPredefinedSlides();
-    const maxPredefinedId =
-      predefined.length > 0 ? Math.max(...predefined.map((s) => s.id)) : 0;
-    const maxCanvasId =
-      customCanvases.length > 0 ? 1000 + (customCanvases.length - 1) : 0;
-    return Math.max(maxPredefinedId, maxCanvasId);
-  };
+  const predefinedSlides = getFilteredPredefinedSlides();
 
-  // Slideshow functions
   const startSlideshow = () => {
     setIsSlideshow(true);
     slideshowIntervalRef.current = window.setInterval(() => {
@@ -552,39 +440,19 @@ const SetupTemplatePage = () => {
   };
 
   const toggleSlideshow = () => {
-    if (isSlideshow) {
-      stopSlideshow();
-    } else {
-      startSlideshow();
-    }
+    isSlideshow ? stopSlideshow() : startSlideshow();
   };
 
-  // Handle manual slide change during slideshow
-  const handleSlideChange = (slideId: number) => {
-    setActiveSlide(slideId);
-    // If slideshow is running, restart the interval from this slide
-    if (isSlideshow) {
-      stopSlideshow();
-      startSlideshow();
-    }
+  const handleSlideChange = (id: number) => {
+    setActiveSlide(id);
+    if (isSlideshow) stopSlideshow(), startSlideshow();
   };
 
-  // Handle duration change
-  const handleDurationChange = (duration: number) => {
-    setSlideDuration(duration);
-    // If slideshow is running, restart it with new duration
+  const handleDurationChange = (time: number) => {
+    setSlideDuration(time);
     if (isSlideshow) {
       stopSlideshow();
-      // Use setTimeout to start with new duration after current interval is cleared
-      setTimeout(() => {
-        setIsSlideshow(true);
-        slideshowIntervalRef.current = window.setInterval(() => {
-          setActiveSlide((prev) => {
-            const maxSlideId = getMaxSlideId();
-            return prev >= maxSlideId ? 1 : prev + 1;
-          });
-        }, duration * 1000);
-      }, 100);
+      setTimeout(() => startSlideshow(), 100);
     }
   };
 
@@ -592,43 +460,29 @@ const SetupTemplatePage = () => {
     setMediaFiles((prev) => [...prev, media]);
   };
 
-  const handleMediaRemove = (mediaId: string) => {
-    setMediaFiles((prev) => {
-      const mediaToRemove = prev.find((m) => m.id === mediaId);
-      if (mediaToRemove && !mediaToRemove.isExisting && mediaToRemove.file) {
-        // Clean up the URL object for uploaded media (not template media)
-        URL.revokeObjectURL(URL.createObjectURL(mediaToRemove.file));
-      }
-      return prev.filter((m) => m.id !== mediaId);
-    });
-
-    // Track removed media IDs to sync with FileUpload component
-    setRemovedMediaIds((prev) => [...prev, mediaId]);
+  const handleMediaRemove = (id: string) => {
+    setMediaFiles((prev) => prev.filter((m) => m.id !== id));
+    setRemovedMediaIds((prev) => [...prev, id]);
   };
 
-  const handleFrameRemove = (frameId: number) => {
-    setRemovedFrameIds((prev) => [...prev, frameId]);
-    // Remove from currentDefaultFrames so it doesn't come back on save
-    setCurrentDefaultFrames((prev) => prev.filter((id) => id !== frameId));
-    if (activeSlide === frameId) {
-      const next = getFirstAvailablePredefinedId();
-      setActiveSlide(next ?? 0);
+  const handleFrameRemove = (id: number) => {
+    setRemovedFrameIds((r) => [...r, id]);
+    setCurrentDefaultFrames((c) => c.filter((x) => x !== id));
+    if (activeSlide === id) {
+      const first = getFirstAvailablePredefinedId();
+      setActiveSlide(first ?? 0);
     }
   };
 
   const handleAddCanvas = () => {
-    if (customCanvases.length >= 10) {
-      toast.error("Maximum 10 blank canvases allowed");
-      return;
-    }
-
-    const newCanvas: CustomCanvas = {
+    if (customCanvases.length >= 10)
+      return toast.error("Max 10 blank canvases allowed");
+    const newCanvas = {
       id: `canvas-${Date.now()}`,
       name: `Canvas ${customCanvases.length + 1}`,
     };
     setCustomCanvases((prev) => [...prev, newCanvas]);
-    const newSlideId = 1000 + customCanvases.length;
-    setActiveSlide(newSlideId);
+    setActiveSlide(1000 + customCanvases.length);
   };
 
   const handleCanvasImageChange = (
@@ -636,80 +490,75 @@ const SetupTemplatePage = () => {
     image: CanvasImage | undefined
   ) => {
     setCustomCanvases((prev) =>
-      prev.map((canvas) =>
-        canvas.id === canvasId ? { ...canvas, image } : canvas
-      )
+      prev.map((c) => (c.id === canvasId ? { ...c, image } : c))
     );
   };
 
   const handleSidebarMediaClick = (media: MediaFile) => {
     if (!(activeSlide >= 1000)) return;
-    const canvasIndex = activeSlide - 1000;
-    if (canvasIndex < 0 || canvasIndex >= customCanvases.length) return;
     if (media.type !== "image") return;
+
+    const canvasIndex = activeSlide - 1000;
+    const imgUrl = media.frameUrl || media.thumbnailUrl;
+    if (!imgUrl) return;
 
     const rectWidth = 849;
     const rectHeight = 483;
-    const imgEl = new Image();
-    const url = media.frameUrl || media.thumbnailUrl || "";
-    if (!url) return;
-    imgEl.onload = () => {
-      // Fit to full canvas while preserving aspect ratio
-      const fitScale = Math.min(
-        rectWidth / imgEl.naturalWidth,
-        rectHeight / imgEl.naturalHeight
-      );
-      const width = imgEl.naturalWidth * fitScale;
-      const height = imgEl.naturalHeight * fitScale;
+    const img = new Image();
 
-      const newImg: CanvasImage = {
-        id: `img-${Date.now()}-${Math.random()}`,
-        url,
-        sourceUrl: media.frameUrl || media.thumbnailUrl || url,
-        x: (rectWidth - width) / 2,
-        y: (rectHeight - height) / 2,
-        width,
-        height,
+    img.onload = () => {
+      const scale = Math.min(rectWidth / img.width, rectHeight / img.height);
+      const w = img.width * scale;
+      const h = img.height * scale;
+
+      const newImage: CanvasImage = {
+        id: `img-${Date.now()}`,
+        url: imgUrl,
+        sourceUrl: imgUrl,
+        x: (rectWidth - w) / 2,
+        y: (rectHeight - h) / 2,
+        width: w,
+        height: h,
       };
-      const targetCanvasId = customCanvases[canvasIndex].id;
-      handleCanvasImageChange(targetCanvasId, newImg);
+
+      const canvasId = customCanvases[canvasIndex].id;
+      handleCanvasImageChange(canvasId, newImage);
     };
-    imgEl.src = url;
+
+    img.src = imgUrl;
   };
 
-  const handleCanvasRemove = (canvasId: string) => {
-    setCustomCanvases((prev) => prev.filter((c) => c.id !== canvasId));
-    const canvasIndex = customCanvases.findIndex((c) => c.id === canvasId);
-    if (activeSlide === 1000 + canvasIndex) {
-      const first = getFirstAvailableSlideId();
+  const handleCanvasRemove = (id: string) => {
+    setCustomCanvases((prev) => prev.filter((c) => c.id !== id));
+    const index = customCanvases.findIndex((c) => c.id === id);
+    if (activeSlide === 1000 + index) {
+      const first = getFirstAvailablePredefinedId();
       setActiveSlide(first ?? 0);
     }
   };
 
   const handlePreview = () => {
-    const availableFrames = currentDefaultFrames.filter(
-      (frameId) => !removedFrameIds.includes(frameId)
+    const frames = currentDefaultFrames.filter(
+      (id) => !removedFrameIds.includes(id)
     );
-    const canvasesWithImages = customCanvases.filter(
-      (canvas) => !!canvas.image
-    );
+    const canvases = customCanvases.filter((c) => c.image);
 
     navigate("/preview", {
       state: {
-        defaultFrames: availableFrames,
-        customCanvases: canvasesWithImages,
+        defaultFrames: frames,
+        customCanvases: canvases,
         slideDuration,
         outdoorAPIState,
       },
     });
   };
 
-  // Cleanup URLs when component unmounts
+  // Cleanup
   useEffect(() => {
     return () => {
-      mediaFiles.forEach((media) => {
-        if (!media.isExisting && media.file) {
-          URL.revokeObjectURL(URL.createObjectURL(media.file));
+      mediaFiles.forEach((m) => {
+        if (!m.isExisting && m.file) {
+          URL.revokeObjectURL(URL.createObjectURL(m.file));
         }
       });
     };
@@ -717,58 +566,29 @@ const SetupTemplatePage = () => {
 
   useEffect(() => {
     return () => {
-      if (slideshowIntervalRef.current) {
-        clearInterval(slideshowIntervalRef.current);
-      }
+      if (slideshowIntervalRef.current) clearInterval(slideshowIntervalRef.current);
     };
   }, []);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isSlideshow) {
-        stopSlideshow();
-      }
-      if (event.key === " " && event.ctrlKey) {
-        event.preventDefault();
+    const listener = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isSlideshow) stopSlideshow();
+      if (e.key === " " && e.ctrlKey) {
+        e.preventDefault();
         toggleSlideshow();
       }
     };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
+    document.addEventListener("keydown", listener);
+    return () => document.removeEventListener("keydown", listener);
   }, [isSlideshow]);
-
-  // Handle activeSlide validation when template or slides change
-  useEffect(() => {
-    const maxSlideId = getMaxSlideId();
-
-    // If current active slide is beyond the available slides, reset to first slide
-    if (activeSlide > maxSlideId && maxSlideId > 0) {
-      const first = getFirstAvailablePredefinedId();
-      setActiveSlide(first ?? 0);
-    }
-
-    // If current active slide is a removed frame, reset to first slide
-    if (removedFrameIds.includes(activeSlide) && maxSlideId > 0) {
-      const first = getFirstAvailablePredefinedId();
-      setActiveSlide(first ?? 0);
-    }
-  }, [templateData, mediaFiles.length, activeSlide, removedFrameIds]);
-
-  // Get filtered predefined slides based on template data
-  const predefinedSlides = getFilteredPredefinedSlides();
 
   const renderCurrentSlide = () => {
     const validIds = currentDefaultFrames.filter(
       (id) => !removedFrameIds.includes(id)
     );
-    const isPredefined = activeSlide >= 1 && activeSlide <= 5;
+
     if (
-      (activeSlide === 0 ||
-        (isPredefined && !validIds.includes(activeSlide))) &&
-      activeSlide < 1000
+      (activeSlide === 0 || (activeSlide >= 1 && activeSlide <= 5 && !validIds.includes(activeSlide)))
     ) {
       return (
         <div className="w-[900px] h-[500px] flex items-center justify-center bg-white text-gray-500">
@@ -777,52 +597,48 @@ const SetupTemplatePage = () => {
       );
     }
 
-    if (
-      activeSlide >= 1 &&
-      activeSlide <= 5 &&
-      !removedFrameIds.includes(activeSlide)
-    ) {
-      const predefinedSlides = getFilteredPredefinedSlides();
+    if (activeSlide >= 1 && activeSlide <= 5) {
       const slide = predefinedSlides.find((s) => s.id === activeSlide);
-
       return (
         slide?.component || (
-          <IndoorAQIFrame aqiData={aqiLogsHistory} isLoading={aqiLogsLoading} />
+          <IndoorAQIFrame
+    aqiData={deviceMid ? latestAQIData : undefined}
+    isLoading={!deviceMid || latestAQILoading}
+    lastUpdated={latestAQIData?.timestamp}
+  />
         )
       );
     }
 
     if (activeSlide >= 1000) {
-      const canvasIndex = activeSlide - 1000;
-      if (canvasIndex >= 0 && canvasIndex < customCanvases.length) {
-        const canvas = customCanvases[canvasIndex];
-
-        return <BlankCanvas image={canvas.image} isPreview={false} />;
-      }
+      const index = activeSlide - 1000;
+      const canvas = customCanvases[index];
+      return <BlankCanvas image={canvas?.image} isPreview={false} />;
     }
 
     return (
-      <IndoorAQIFrame aqiData={aqiLogsHistory} isLoading={aqiLogsLoading} />
+      <IndoorAQIFrame
+        aqiData={latestAQIData}
+        isLoading={latestAQILoading}
+        lastUpdated={latestAQIData?.timestamp}
+      />
     );
   };
 
-  const currentSlide = renderCurrentSlide();
-
   const slides = [
     ...predefinedSlides,
-    ...customCanvases.map((canvas, index) => ({
+    ...customCanvases.map((c, index) => ({
       id: 1000 + index,
-      name: canvas.name,
-      thumbnail: canvas.image
-        ? canvas.image.url
+      name: c.name,
+      thumbnail: c.image
+        ? c.image.url
         : "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23f3f4f6' width='100' height='100'/%3E%3Ctext x='50' y='50' font-family='Arial' font-size='40' fill='%239ca3af' text-anchor='middle' dominant-baseline='middle'%3E+%3C/text%3E%3C/svg%3E",
       isMedia: false,
       isCanvas: true,
-      canvasId: canvas.id,
+      canvasId: c.id,
     })),
   ];
 
-  // Show loading state while template is being fetched
   if (templateLoading) {
     return (
       <div className="flex h-full items-center justify-center bg-white">
@@ -834,7 +650,6 @@ const SetupTemplatePage = () => {
     );
   }
 
-  // Show error state if template failed to load
   if (templateError) {
     return (
       <div className="flex h-full items-center justify-center bg-white">
@@ -844,12 +659,11 @@ const SetupTemplatePage = () => {
             Failed to load template
           </h3>
           <p className="text-gray-600 mb-4">
-            {templateError.message ||
-              "An error occurred while loading the template"}
+            {templateError.message || "An error occurred while loading the template"}
           </p>
           <button
             onClick={() => mutateTemplate()}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Retry
           </button>
@@ -858,7 +672,6 @@ const SetupTemplatePage = () => {
     );
   }
 
-  // Show error if no template ID provided
   if (!templateId) {
     return (
       <div className="flex h-full items-center justify-center bg-white">
@@ -867,9 +680,7 @@ const SetupTemplatePage = () => {
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
             No template ID provided
           </h3>
-          <p className="text-gray-600">
-            Please provide a valid template ID in the URL parameters
-          </p>
+          <p className="text-gray-600">Please provide a valid template ID in URL</p>
         </div>
       </div>
     );
@@ -878,7 +689,7 @@ const SetupTemplatePage = () => {
   return (
     <div className="flex h-full overflow-hidden bg-white">
       <div className="flex-1 flex flex-col min-h-0 min-w-0">
-        <div className="px-4 py-2 bg-white border-b border-gray-200 flex-shrink-0">
+        <div className="px-4 py-2 bg-white border-b border-gray-200">
           <TemplateSetupHeader
             defaultValue={selectedTemplate}
             onChange={handleTemplateChange}
@@ -894,12 +705,12 @@ const SetupTemplatePage = () => {
         <div className="flex-1 overflow-hidden bg-gray-100 min-h-0">
           <div className="w-full h-full flex items-center justify-center p-6 relative">
             <div className="flex items-center justify-center rounded-lg shadow-lg bg-white">
-              {currentSlide}
+              {renderCurrentSlide()}
             </div>
           </div>
         </div>
 
-        <div className="bg-white border-t border-gray-200 flex-shrink-0 min-w-0">
+        <div className="bg-white border-t border-gray-200">
           <TemplateSetupFooter
             slides={slides}
             activeSlide={activeSlide}
@@ -912,7 +723,7 @@ const SetupTemplatePage = () => {
         </div>
       </div>
 
-      <div className="w-56 bg-white border-l border-gray-200 shadow-lg flex-shrink-0">
+      <div className="w-56 bg-white border-l border-gray-200 shadow-lg">
         <FileUpload
           onMediaUpload={handleMediaUpload}
           onMediaRemove={handleMediaRemove}

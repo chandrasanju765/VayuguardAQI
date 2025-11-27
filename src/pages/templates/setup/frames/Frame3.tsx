@@ -7,16 +7,16 @@ import type { AQICNGeoFeedData } from "../../../../types/aqicn";
 
 interface ComparisonScaleFrameProps {
   aqiData?: GetAQILogsHistoryByDeviceIDResponse["data"];
-  realtimeAQIData?: any;
+  realtimeAQIData?: any; // <-- We use this ONLY for indoor
   isLoading?: boolean;
   error?: any;
-  outdoorAQIData?: AQICNGeoFeedData | null;
+  outdoorAQIData?: AQICNGeoFeedData | null; // <-- untouched
   outdoorLoading?: boolean;
   outdoorError?: any;
 }
 
 export const ComparisonScaleFrame = ({
-  aqiData,
+  // aqiData,
   realtimeAQIData,
   isLoading,
   error,
@@ -26,47 +26,33 @@ export const ComparisonScaleFrame = ({
 }: ComparisonScaleFrameProps): React.JSX.Element => {
   const selectedStandard = useAtomValue(selectedAQIStandardAtom);
 
-  // Create dynamic indoor metrics based on REAL-TIME data - NEW ORDER
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  // ⭐ INDOOR MUST ALWAYS COME FROM REALTIME ONLY
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   const indoorMetrics = useMemo(() => {
     const labels = ["PM 2.5", "PM 10.0", "TVOC", "Temperature", "Humidity", "CO2"];
     const dataKeys = ["pm2.5", "pm10.0", "tvoc", "temp", "humidity", "co2"];
-    const parameterKeys = [
-      "pm2.5",
-      "pm10.0", 
-      "tvoc",
-      "temp",
-      "humidity",
-      "co2",
-    ];
+    const parameterKeys = ["pm2.5", "pm10.0", "tvoc", "temp", "humidity", "co2"];
 
-    // Use real-time data if available, otherwise fall back to historical data
-    const indoorData = realtimeAQIData?.indoor_air_quality 
-      ? convertRealtimeToIndoorAvg(realtimeAQIData.indoor_air_quality)
-      : aqiData?.indoor_avg;
+    // ---- REALTIME ONLY (exact same logic as Frame 1)
+    const indoorLiveData = formatRealtimeIndoor(realtimeAQIData?.indoor_air_quality);
 
-    return indoorData
-      ? createMetrics(
-          indoorData,
-          selectedStandard,
-          labels,
-          dataKeys,
-          parameterKeys
-        )
-      : createMetrics({}, selectedStandard, labels, dataKeys, parameterKeys);
-  }, [realtimeAQIData, aqiData, selectedStandard]);
+    return createMetrics(
+      indoorLiveData,
+      selectedStandard,
+      labels,
+      dataKeys,
+      parameterKeys
+    );
+  }, [realtimeAQIData, selectedStandard]);
 
-  // Create dynamic outdoor metrics based on AQICN API data - NEW ORDER
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  // ⭐ OUTDOOR – DO NOT TOUCH THIS
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
   const outdoorMetrics = useMemo(() => {
     const labels = ["PM 2.5", "PM 10.0", "TVOC", "Temperature", "Humidity", "CO2"];
     const dataKeys = ["pm25", "pm10", "tvoc", "t", "h", "co2"];
-    const parameterKeys = [
-      "pm2.5",
-      "pm10.0",
-      "tvoc",
-      "temp",
-      "humidity",
-      "co2",
-    ];
+    const parameterKeys = ["pm2.5", "pm10.0", "tvoc", "temp", "humidity", "co2"];
 
     return outdoorAQIData?.iaqi
       ? createMetrics(
@@ -77,14 +63,7 @@ export const ComparisonScaleFrame = ({
           parameterKeys,
           true
         )
-      : createMetrics(
-          {},
-          selectedStandard,
-          labels,
-          dataKeys,
-          parameterKeys,
-          true
-        );
+      : createMetrics({}, selectedStandard, labels, dataKeys, parameterKeys, true);
   }, [outdoorAQIData, selectedStandard]);
 
   const cols = 3;
@@ -94,16 +73,12 @@ export const ComparisonScaleFrame = ({
 
   return (
     <div className="bg-neutral-100 p-12 relative w-[900px] h-[500px]">
-      {/* Logo in top right corner */}
+      {/* Logo */}
       <div className="absolute top-4 right-4 z-20">
-        <img 
-          src="/VG_logo.png" 
-          alt="VG Logo" 
-          className="h-8 w-auto" 
-        />
+        <img src="/VG_logo.png" alt="VG Logo" className="h-8 w-auto" />
       </div>
 
-      {/* Loading State */}
+      {/* Loading */}
       {(isLoading || outdoorLoading) && (
         <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-20">
           <div className="bg-white p-4 rounded-lg shadow-lg">
@@ -112,7 +87,7 @@ export const ComparisonScaleFrame = ({
         </div>
       )}
 
-      {/* Error State */}
+      {/* Errors */}
       {(error || outdoorError) && !isLoading && !outdoorLoading && (
         <div className="absolute top-4 left-4 right-4 bg-red-100 border border-red-300 text-red-700 px-3 py-2 rounded z-10">
           <p className="text-sm">
@@ -124,7 +99,7 @@ export const ComparisonScaleFrame = ({
 
       <div className="grid grid-cols-3 gap-7 w-full h-full">
         {/* INDOOR */}
-        <div className="">
+        <div>
           <h1 className="font-bold text-2xl uppercase text-center mb-10">
             Indoor
           </h1>
@@ -143,10 +118,10 @@ export const ComparisonScaleFrame = ({
                   }}
                   className="flex flex-col w-20 h-20 items-center justify-center gap-0.5 rounded-full shadow"
                 >
-                  <div className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[-0.32px] leading-[21.6px] text-center">
+                  <div className="font-medium text-base text-center">
                     {metric.value}
                   </div>
-                  <div className="[font-family:'Gilroy-Medium',Helvetica] font-medium opacity-75 text-xs tracking-[-0.12px] leading-[16.2px] text-center">
+                  <div className="font-medium opacity-75 text-xs text-center">
                     {metric.label}
                   </div>
                 </div>
@@ -155,6 +130,7 @@ export const ComparisonScaleFrame = ({
           </div>
         </div>
 
+        {/* AQI Scale */}
         <div
           className="w-28 h-96 mx-auto rounded-full flex flex-col justify-between py-6 px-2"
           style={{
@@ -170,7 +146,7 @@ export const ComparisonScaleFrame = ({
         </div>
 
         {/* OUTDOOR */}
-        <div className="">
+        <div>
           <h1 className="font-bold text-2xl uppercase text-center mb-10">
             Outdoor
           </h1>
@@ -189,10 +165,10 @@ export const ComparisonScaleFrame = ({
                   }}
                   className="flex flex-col w-20 h-20 items-center justify-center gap-0.5 rounded-full shadow"
                 >
-                  <div className="[font-family:'Gilroy-Medium',Helvetica] font-medium text-base tracking-[-0.32px] leading-[21.6px] text-center">
+                  <div className="font-medium text-base text-center">
                     {metric.value}
                   </div>
-                  <div className="[font-family:'Gilroy-Medium',Helvetica] font-medium opacity-75 text-xs tracking-[-0.12px] leading-[16.2px] text-center">
+                  <div className="font-medium opacity-75 text-xs text-center">
                     {metric.label}
                   </div>
                 </div>
@@ -205,21 +181,20 @@ export const ComparisonScaleFrame = ({
   );
 };
 
-// Helper function to convert real-time data format to indoor_avg format
-const convertRealtimeToIndoorAvg = (indoorAirQuality: any[]): Record<string, number> => {
-  const result: Record<string, number> = {};
-  
-  if (!indoorAirQuality || !Array.isArray(indoorAirQuality)) {
-    return result;
-  }
+// ⭐ EXACT SAME REALTIME FORMATTER AS FRAME 1
+const formatRealtimeIndoor = (arr: any[]): Record<string, number> => {
+  const obj: Record<string, number> = {};
 
-  indoorAirQuality.forEach((item: any) => {
-    if (item && item.param && (typeof item.value === 'number' || item.value === 0)) {
-      result[item.param] = item.value;
+  if (!Array.isArray(arr)) return obj;
+
+  arr.forEach((item) => {
+    const key = item.param || item.parameter;
+    if (key && (typeof item.value === "number" || item.value === 0)) {
+      obj[key] = item.value;
     }
   });
 
-  return result;
+  return obj;
 };
 
 const Frame3 = (props: ComparisonScaleFrameProps) => {
